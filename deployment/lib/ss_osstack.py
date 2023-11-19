@@ -17,7 +17,7 @@ class OpenSearchStack(Stack):
     super().__init__(scope, construct_id, **kwargs)
 
 
-    ops_domain_name = 'intelligent-recommendation'
+    ops_domain_name = 'smartsearch'
 
     master_user_secret = aws_secretsmanager.Secret(self, "OpenSearchMasterUserSecret",
       generate_secret_string=aws_secretsmanager.SecretStringGenerator(
@@ -36,7 +36,7 @@ class OpenSearchStack(Stack):
       domain_name=ops_domain_name,
       #XXX: Supported versions of OpenSearch and Elasticsearch
       # https://docs.aws.amazon.com/opensearch-service/latest/developerguide/what-is.html#choosing-version
-      version=aws_opensearchservice.EngineVersion.OPENSEARCH_1_3,
+      version=aws_opensearchservice.EngineVersion.OPENSEARCH_2_9,
       #XXX: Amazon OpenSearch Service - Current generation instance types
       # https://docs.aws.amazon.com/opensearch-service/latest/developerguide/supported-instance-types.html#latest-gen
       # access_policies=[_iam.PolicyStatement(
@@ -49,9 +49,9 @@ class OpenSearchStack(Stack):
       #       ),],
       capacity={
         "master_nodes": 0,
-        "master_node_instance_type": "m5.xlarge.search",
+        "master_node_instance_type": "m5.large.search",
         "data_nodes": 1,
-        "data_node_instance_type": "m5.xlarge.search"
+        "data_node_instance_type": "m5.large.search"
       },
       ebs={
         "volume_size": 20,

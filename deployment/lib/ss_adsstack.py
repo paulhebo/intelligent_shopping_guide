@@ -106,3 +106,33 @@ class AdsStack(Stack):
             ]
         )
         
+        user_table = dynamodb.Table(self, "retail_user_table",
+                                    partition_key=dynamodb.Attribute(name="user_id",
+                                                                     type=dynamodb.AttributeType.STRING)
+                                    )
+                                    
+        item_table = dynamodb.Table(self, "retail_item_table",
+                                    partition_key=dynamodb.Attribute(name="item_id",
+                                                                     type=dynamodb.AttributeType.STRING)
+                                    )
+    
+        dynamodb_role = iam.Role(
+            self, 'dynamodb_role',
+            assumed_by=iam.ServicePrincipal('dynamodb.amazonaws.com')
+        )
+        dynamodb_role_policy = iam.PolicyStatement(
+            actions=[
+                'sagemaker:InvokeEndpointAsync',
+                'sagemaker:InvokeEndpoint',
+                's3:AmazonS3FullAccess',
+                'lambda:AWSLambdaBasicExecutionRole',
+            ],
+            effect=iam.Effect.ALLOW,
+            resources=['*']
+        )
+        dynamodb_role.add_to_policy(dynamodb_role_policy)
+        
+        user_table.grant_read_write_data(dynamodb_role)
+        item_table.grant_read_write_data(dynamodb_role)
+        ads_function.add_environment("user_table_name", user_table.table_name)
+        ads_function.add_environment("item_table_name", item_table.table_name)

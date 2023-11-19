@@ -3,6 +3,7 @@ import json
 import traceback
 from chat_bot import *
 from session import get_table_info
+from prompt import get_prompt_template
 
 LLM_ENDPOINT_NAME = os.environ.get('llm_embedding_name')
 REGION = os.environ.get('AWS_REGION')
@@ -10,11 +11,6 @@ LANGUAGE =  os.environ.get('language')
 
 USER_TABLE_NAME =  os.environ.get('user_table_name')
 ITEM_TABLE_NAME =  os.environ.get('item_table_name')
-
-# user_table_name = 'PersonalizeStack-retailusertable9836B5C5-HKAHZW7IOMWF'
-# item_table_name='PersonalizeStack-retailitemtable624AB3CD-DBBU6LWB5U3A'
-
-system_content = "If you are a shopping guide of an e-commerce website, please generate product marketing advertising messages within 50 words for the user according to the user's information and shopping history, as well as the basic information of the product."
 
 
 def lambda_handler(event, context):
@@ -24,6 +20,11 @@ def lambda_handler(event, context):
     print('item_table_name:',ITEM_TABLE_NAME)    
     
     evt_body = event['queryStringParameters']
+    
+    query = "hello"
+    if "query" in evt_body.keys():
+        query = evt_body['query'].strip()
+    print('query:',query)    
     
     userId = 1
     if "userId" in event.keys():
@@ -38,39 +39,73 @@ def lambda_handler(event, context):
     elif "queryStringParameters" in event.keys():
         if "itemIdList" in evt_body.keys():
             itemIdList = evt_body['itemIdList'].strip()
-        
+            
     itemIdList=itemIdList.split(',')
     print('itemIdList:',itemIdList)
 
-    itemInfoList = []
-    for itemId in itemIdList:
-        print('item_id:',itemId)
-        itemInfo = get_table_info(ITEM_TABLE_NAME, itemId, 'item')
-        print('item_info:',itemInfo)
-        itemInfoList.append(itemInfo)
-    print('item_info_list:',itemInfoList)
+    items_Info_text = ''
+    if len(itemIdList) > 0:
+        itemInfoList = []
+        for itemId in itemIdList:
+            print('item_id:',itemId)
+            itemInfo = get_table_info(ITEM_TABLE_NAME, itemId, 'item')
+            print('item_info:',itemInfo)
+            itemInfoList.append(itemInfo)
+        print('item_info_list:',itemInfoList)
+        i = 0
+        for item in itemInfoList:
+            category_2=item['category_2']
+            product_description=item['product_description']
+            price=item['price']
+            i += 1
+            items_Info_text += ('Commodity ' + str(i) + ':the' + category_2 + ',' + product_description + ',the price is ' + str(price) + ';')
+    else:
+        if "itemInfo" in evt_body.keys():
+            items_Info_text = evt_body['itemInfo']
 
     userInfo = get_table_info(USER_TABLE_NAME, userId, 'user')
+    user_base_info = ''
+    history_item_info = ''
     print('user_info:',userInfo)
-    userBase = userInfo['user_base']
-    userHistory = userInfo['user_history']
+    if len(userInfo) > 0:
+        userBase = userInfo['user_base']
+        userHistory = userInfo['user_history']
+        age = userBase['age']
+        gender = userBase['gender']
+        user_base_info = 'user age:'+str(age)+',gender:'+gender+';'
+        
+        if len(userHistory) > 0:
+            history_item_info = "user's shopping history:"
+            for item in userHistory:
+                category_2 = item['category_2']
+                product_description = item['product_description']
+                price = item['price']
+                history_item_info += ('The '+ category_2 + ',' + product_description + ',the price is ' + str(price) + ';')
     
     modelType = 'normal'
     if "modelType" in evt_body.keys():
         modelType = evt_body['modelType']
   
-    urlOrApiKey = ''
-    if "urlOrApiKey" in evt_body.keys():
-        urlOrApiKey = evt_body['urlOrApiKey']
+    apiUrl = ''
+    if "apiUrl" in evt_body.keys():
+        apiUrl = evt_body['apiUrl']
   
+    apiKey = ''
+    if "apiKey" in evt_body.keys():
+        apiKey = evt_body['apiKey']
+
+    secretKey = ''
+    if "secretKey" in evt_body.keys():
+        secretKey = evt_body['secretKey']
+
     modelName = 'anthropic.claude-v2'
     if "modelName" in evt_body.keys():
         modelName = evt_body['modelName']
 
-    bedrockMaxTokens = 512
-    if "bedrockMaxTokens" in evt_body.keys():
-        bedrockMaxTokens = int(evt_body['bedrockMaxTokens'])
-        
+    maxTokens = 512
+    if "maxTokens" in evt_body.keys():
+        maxTokens = int(evt_body['maxTokens'])
+
     sagemakerEndpoint = LLM_ENDPOINT_NAME
     if "sagemakerEndpoint" in evt_body.keys():
         sagemakerEndpoint = evt_body['sagemakerEndpoint']
@@ -91,18 +126,30 @@ def lambda_handler(event, context):
                          sagemakerEndpoint,
                          temperature,
                          modelType,
-                         urlOrApiKey,
+                         apiUrl,
                          modelName,
-                         bedrockMaxTokens
+                         apiKey,
+                         secretKey,
+                         maxTokens
                          )
-    
-        itemAds = chat_bot.get_item_ads_llama2(
-                                              REGION,
-                                              itemInfoList,
-                                              userBase,
-                                              userHistory,
-                                              system_content
-                                              )
+        if modelType == 'llama2':
+            system_content = get_prompt_template(language,modelType,'ads-sys')
+            query = get_prompt_template(language,modelType,'ads-chat')
+            itemAds = chat_bot.get_item_ads_llama2(query,
+                                                  item_Info_text,
+                                                  user_base_info,
+                                                  history_item_info,
+                                                  system_content
+                                                  )
+        else:
+            prompt_template = get_prompt_template(language,modelType,'ads')
+            itemAds = chat_bot.get_item_ads(
+                                      query,
+                                      items_Info_text,
+                                      userBase,
+                                      userHistory,
+                                      system_content
+                                      )
         print('item_ads:',itemAds)
         response = {
             "statusCode": 200,

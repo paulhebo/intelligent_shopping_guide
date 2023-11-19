@@ -4,11 +4,12 @@ import aws_cdk as cdk
 from lib.ss_chatstack import ChatBotStack
 from lib.ss_productstack import ProductRecommedationStack
 from lib.ss_osstack import OpenSearchStack
-from lib.ss_perstack import PersonalizeStack
 from lib.ss_perrankstack import PersonalizeRankingStack
 from lib.ss_adsstack import AdsStack
 from lib.ss_userstack import UserInfoStack
 from lib.ss_bedrockstack import BedrockStack
+from lib.ss_notebook import NotebookStack
+
 
 ACCOUNT = os.getenv('AWS_ACCOUNT_ID', '')
 REGION = os.getenv('AWS_REGION', '')
@@ -23,8 +24,9 @@ search_engine_key = searchstack.search_domain_endpoint
 chatstack = ChatBotStack(app, "ChatBotStack",env=env)
 bedrockstack = BedrockStack( app, "BedrockStack", env=env)
 prstack = ProductRecommedationStack(app, "ProductRecommedationStack",search_engine_key=search_engine_key,env=env)
-# prerankstack = PersonalizeRankingStack(app,"PersonalizeRankingStack",env=env)
-# adsstack = AdsStack(app,"AdsStack",env=env)
-# userstack = UserInfoStack(app,"UserInfoStack",env=env)
+notebookstack = NotebookStack(app, "NotebookStack", search_engine_key=search_engine_key, env=env)
+prerankstack = PersonalizeRankingStack(app,"PersonalizeRankingStack",env=env)
+adsstack = AdsStack(app,"AdsStack",env=env)
+userstack = UserInfoStack(app,"UserInfoStack",env=env)
 
 app.synth()

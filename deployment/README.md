@@ -56,10 +56,7 @@ Configurate parameters:
     "embedding_endpoint_name"
     "llm_embedding_name"
     "language"
-    "openai_api_key"
-    "milvus_host"
-    "milvus_port"
-    "collection_name"
+    "index"
 ```
 
 

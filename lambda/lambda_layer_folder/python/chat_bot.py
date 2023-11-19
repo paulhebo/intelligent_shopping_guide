@@ -4,6 +4,7 @@ from langchain.prompts.prompt import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import LLMChain
 from langchain.llms import AmazonAPIGatewayBedrock
+from langchain.llms import AmazonAPIGateway
 import json
 
 import boto3
@@ -33,9 +34,11 @@ class ShoppingGuideChatBot:
                  llm_endpoint_name: str = 'pytorch-inference-llm-v1',
                  temperature: float = 0.01,
                  model_type:str = "normal",
-                 bedrock_api_url:str = "",
-                 bedrock_model_id:str="anthropic.claude-v2",
-                 bedrock_max_tokens:int=500
+                 api_url:str = "",
+                 model_name:str="anthropic.claude-v2",
+                 api_key:str = "",
+                 secret_key:str = "",
+                 max_tokens:int=512,
                 ):
                     
         if model_type == "llama2":
@@ -49,45 +52,76 @@ class ShoppingGuideChatBot:
             }
             self.llm.model_kwargs = parameters
         elif model_type == "bedrock":
-            self.llm = init_model_bedrock(bedrock_model_id)
+            self.llm = init_model_bedrock(model_name)
             parameters={
-                "max_tokens":bedrock_max_tokens,
+                "modelId":model_name,
+                "max_tokens":max_tokens,
                 "temperature":temperature
             }
             self.llm.model_kwargs = parameters
-            
+        elif model_type == 'llm_api':
+            if model_name.find('Baichuan2') >= 0:
+                self.llm = AmazonAPIGateway(api_url=api_url)
+                parameters={
+                    "modelId":model_name,
+                    "api_key":api_key,
+                    "secret_key":secret_key,
+                }
+                self.llm.model_kwargs = parameters
         else:
             self.llm = init_model(llm_endpoint_name,region,temperature)
             
     def get_chat(self,query,
-                      task: str='chat',
                       prompt_template: str='',
                       session_id: str='',
                       table_name: str='',
-                      items_info: str=''
                 ):
                     
-        if task == 'chat':    
-            prompt = PromptTemplate(
-                input_variables=["question"], 
-                template=prompt_template
-            )
-            history = get_history(session_id,table_name)
-            his_query = ''
-            if len(history) > 0:
-                for (question,answer) in history:
-                    if question != query:
-                        his_query += (question+',') 
-            print('his_query:',his_query)
-            query = string_processor(query)
-            if len(his_query) > 0:
-                query = his_query + query  
+    
+        prompt = PromptTemplate(
+            input_variables=["question"], 
+            template=prompt_template
+        )
+        history = get_history(session_id,table_name)
+        his_query = ''
+        if len(history) > 0:
+            for (question,answer) in history:
+                if question != query:
+                    his_query += (question+',') 
+        print('history query:',his_query)
+        query = string_processor(query)
+        if len(his_query) > 0:
+            combine_query = his_query + query  
 
-        elif task == 'summary':
-            prompt = PromptTemplate(
-                input_variables=["items_info","question"], 
-                template=prompt_template
-            )
+        print('combine query:',combine_query)
+        
+        chat_chain = LLMChain(
+            llm=self.llm,
+            prompt=prompt, 
+            # verbose=True, 
+            # memory=memory,
+        )
+            
+        output = chat_chain.predict(question=combine_query)
+        
+        if len(session_id) > 0 and len(query) > 0:
+            chat_result = output
+            if output.find('@') > 0:
+                chat_result = output.split('@')[1].replace('</answer>','').strip()
+            update_session_info(table_name, session_id, query, chat_result, "chat")
+        
+        return output
+
+
+    def get_item_ads(self,query,
+                          prompt_template: str='',
+                          items_info: str=''
+                    ):
+                    
+        prompt = PromptTemplate(
+            input_variables=["items_info","question"], 
+            template=prompt_template
+        )
  
         print('query:',query)
         
@@ -98,19 +132,9 @@ class ShoppingGuideChatBot:
             # memory=memory,
         )
             
-        if task == 'chat':   
-            output = chat_chain.predict(question=combine_query)
-        elif task == 'summary':
-            output = chat_chain.predict(question=combine_query,items_info=items_info)
-        
-        if len(session_id) > 0 and len(query) > 0:
-            chat_result = output
-            if task == 'chat' and output.find('@') > 0:
-                chat_result = output.split('@')[1].replace('</answer>','').strip()
-            update_session_info(table_name, session_id, query, chat_result, "chat")
+        output = chat_chain.predict(question=query,items_info=items_info)
         
         return output
-
 
 
     def get_chat_llama2(self,query,
@@ -148,37 +172,14 @@ class ShoppingGuideChatBot:
         return response
         
     def get_item_ads_llama2(self,
-                           region,
-                           item_info_list,
-                           user_base,
-                           user_history,
+                           query,
+                           items_info,
+                           user_base_info,
+                           history_item_info,
                            system_content
                           ):
-        
-        age = user_base['age']
-        gender = user_base['gender']
-        user_base_info = 'user age:'+str(age)+',gender:'+gender+';'
-        
-        history_item_info = "user's shopping history:"
-        for item in user_history:
-            category_2 = item['category_2']
-            product_description = item['product_description']
-            price = item['price']
-            history_item_info += ('The '+ category_2 + ',' + product_description + ',the price is ' + str(price) + ';')
-            # history_item_info += ('a '+ category_2 + ',')
         system_content += (user_base_info + history_item_info)
-        
-        item_info = ''
-        i = 0
-        for item in item_info_list:
-            category_2=item['category_2']
-            product_description=item['product_description']
-            price=item['price']
-            i += 1
-            item_info += ('Commodity ' + str(i) + ':the' + category_2 + ',' + product_description + ',the price is ' + str(price) + ';')
-        
-        query="Based on the user's shopping history,Please create advertising messages for each of the following 3 products, each product advertising message is within 200 words."    
-        query += item_info
+        query += items_info
         prompt={
             'system_content':string_processor(system_content),
             'query':string_processor(query)

@@ -95,75 +95,9 @@ def lambda_handler(event, context):
     items_info = '\n\n'.join(item_info_list)
     print('items_info:',items_info)
     
-    
-    #2.get recommandation
-    sessionId=""
-    if "sessionId" in evt_body.keys():
-        sessionId = str(evt_body['sessionId'])
-    print('sessionId:',sessionId)
-    
-    modelType = 'normal'
-    if "modelType" in evt_body.keys():
-        modelType = evt_body['modelType']
-  
-    urlOrApiKey = ''
-    if "urlOrApiKey" in evt_body.keys():
-        urlOrApiKey = evt_body['urlOrApiKey']
-  
-    modelName = 'anthropic.claude-v2'
-    if "modelName" in evt_body.keys():
-        modelName = evt_body['modelName']
-
-    bedrockMaxTokens = 512
-    if "bedrockMaxTokens" in evt_body.keys():
-        bedrockMaxTokens = int(evt_body['bedrockMaxTokens'])
-        
-    sagemakerEndpoint = LLM_ENDPOINT_NAME
-    if "sagemakerEndpoint" in evt_body.keys():
-        sagemakerEndpoint = evt_body['sagemakerEndpoint']
-    
-    temperature = 0.01
-    if "temperature" in evt_body.keys():
-        temperature = float(evt_body['temperature'])
-    
-    language=LANGUAGE
-    if "language" in evt_body.keys():
-        language = evt_body['language']
-    
-    prompt = ''
-    if "prompt" in evt_body.keys():
-        prompt = evt_body['prompt'] 
-    
-    input_body={}
-    input_body['query'] = query.split('@@@')[1]
-    input_body['sessionId'] = sessionId
-    input_body['modelType'] = modelType
-    input_body['urlOrApiKey'] = urlOrApiKey
-    input_body['bedrockMaxTokens'] = bedrockMaxTokens
-    input_body['sagemakerEndpoint'] = sagemakerEndpoint
-    input_body['temperature'] = temperature
-    input_body['language'] = language
-    input_body['task'] = 'summary'
-    input_body['itemsInfo'] = items_info
-    if len(prompt) > 0:
-        input_body['prompt'] = prompt
-    
-    body={"queryStringParameters":input_body}
-    result = lambda_client.invoke(
-                FunctionName = 'chat_bot',
-                InvocationType = 'RequestResponse',
-                Payload = json.dumps(body)
-            )
-    payload = result["Payload"].read().decode("utf-8")
-    payload = json.loads(payload)
-    body = json.loads(payload['body'])
-    product_info = body['answer']
-    print('product_info:',product_info)
-    
     response['body'] = json.dumps(
     {
-        'product_info': product_info
+        'items_info': items_info
     })
-    
     
     return response

@@ -46,17 +46,25 @@ def lambda_handler(event, context):
     if "modelType" in evt_body.keys():
         modelType = evt_body['modelType']
   
-    urlOrApiKey = ''
-    if "urlOrApiKey" in evt_body.keys():
-        urlOrApiKey = evt_body['urlOrApiKey']
+    apiUrl = ''
+    if "apiUrl" in evt_body.keys():
+        apiUrl = evt_body['apiUrl']
   
+    apiKey = ''
+    if "apiKey" in evt_body.keys():
+        apiKey = evt_body['apiKey']
+
+    secretKey = ''
+    if "secretKey" in evt_body.keys():
+        secretKey = evt_body['secretKey']
+
     modelName = 'anthropic.claude-v2'
     if "modelName" in evt_body.keys():
         modelName = evt_body['modelName']
 
-    bedrockMaxTokens = 512
-    if "bedrockMaxTokens" in evt_body.keys():
-        bedrockMaxTokens = int(evt_body['bedrockMaxTokens'])
+    maxTokens = 512
+    if "maxTokens" in evt_body.keys():
+        maxTokens = int(evt_body['maxTokens'])
         
     sagemakerEndpoint = LLM_ENDPOINT_NAME
     if "sagemakerEndpoint" in evt_body.keys():
@@ -77,9 +85,11 @@ def lambda_handler(event, context):
                          sagemakerEndpoint,
                          temperature,
                          modelType,
-                         urlOrApiKey,
+                         apiUrl,
                          modelName,
-                         bedrockMaxTokens
+                         apiKey,
+                         secretKey,
+                         maxTokens
                          )
     
         query = "hello"

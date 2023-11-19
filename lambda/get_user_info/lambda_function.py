@@ -2,19 +2,17 @@ import os
 import json
 from session import get_table_info
 
-USER_TABLE_NAME =  os.environ.get('user_table_name')
-ITEM_TABLE_NAME =  os.environ.get('item_table_name')
-
-# user_table_name = 'PersonalizeStack-retailusertable9836B5C5-HKAHZW7IOMWF'
-# item_table_name='PersonalizeStack-retailitemtable624AB3CD-DBBU6LWB5U3A'
 
 def lambda_handler(event, context):
     
     print("event:",event)
-    print('user_table_name:',USER_TABLE_NAME)
-    print('item_table_name:',ITEM_TABLE_NAME) 
     
     evt_body = event['queryStringParameters']
+    
+    user_table_name = ''
+    if "userTableName" in evt_body.keys():
+        user_table_name = evt_body['userTableName'].strip()
+    print('user_table_name:',user_table_name)    
     
     userId = 1
     if "userId" in event.keys():
@@ -23,7 +21,7 @@ def lambda_handler(event, context):
         if "userId" in evt_body.keys():
             userId = evt_body['userId'].strip()
         
-    userInfo = get_table_info(USER_TABLE_NAME, userId, 'user')
+    userInfo = get_table_info(user_table_name, userId, 'user')
     print('userInfo:',userInfo)
     userBase = userInfo['user_base']
     userHistory = userInfo['user_history']
