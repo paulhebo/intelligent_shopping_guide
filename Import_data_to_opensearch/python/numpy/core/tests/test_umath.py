@@ -1646,6 +1646,8 @@ class TestSpecialFloats:
                           np.array(1200.0, dtype='d'))
 
     @pytest.mark.skipif(IS_WASM, reason="fp errors don't work in wasm")
+    @pytest.mark.skipif('bsd' in sys.platform,
+            reason="fallback implementation may not raise, see gh-2487")
     def test_cosh(self):
         in_ = [np.nan, -np.nan, np.inf, -np.inf]
         out = [np.nan, np.nan, np.inf, np.inf]
@@ -1709,6 +1711,9 @@ class TestSpecialFloats:
                 for dt in ['e', 'f', 'd']:
                     assert_raises(FloatingPointError, np.arctanh,
                                   np.array(value, dtype=dt))
+
+        # Make sure glibc < 2.18 atanh is not used, issue 25087
+        assert np.signbit(np.arctanh(-1j).real)
 
     # See: https://github.com/numpy/numpy/issues/20448
     @pytest.mark.xfail(
