@@ -91,9 +91,9 @@ class ShoppingGuideChatBot:
         print('history query:',his_query)
         query = string_processor(query)
         if len(his_query) > 0:
-            combine_query = his_query + query  
+            query = his_query + query  
 
-        print('combine query:',combine_query)
+        print('combine query:',query)
         
         chat_chain = LLMChain(
             llm=self.llm,
@@ -102,7 +102,7 @@ class ShoppingGuideChatBot:
             # memory=memory,
         )
             
-        output = chat_chain.predict(question=combine_query)
+        output = chat_chain.predict(question=query)
         
         if len(session_id) > 0 and len(query) > 0:
             chat_result = output
@@ -122,6 +122,7 @@ class ShoppingGuideChatBot:
             input_variables=["items_info","question"], 
             template=prompt_template
         )
+        print('prompt:',prompt)
  
         print('query:',query)
         
@@ -139,7 +140,8 @@ class ShoppingGuideChatBot:
 
     def get_chat_llama2(self,query,
                         task: str='chat',
-                        prompt_template: str='',
+                        sys_prompt_template: str='',
+                        chat_prompt_template: str='',
                         session_id: str='',
                         table_name: str=''
                        ):
@@ -154,11 +156,15 @@ class ShoppingGuideChatBot:
                 for (question,answer) in history:
                     his_query += (question+',')
             query = his_query + string_processor(query)
-            query = LLAMA2_SUMMARIZE_CHAT_TEMPLATE.format(query)
+            
+            print('chat_prompt_template 1:',chat_prompt_template)
+            print('query 0:',query)
+            query = chat_prompt_template.format(query)
+            print('query 1:',query)
             history = []
             
         prompt={
-            'system_content':string_processor(prompt_template),
+            'system_content':string_processor(sys_prompt_template),
             'query':string_processor(query),
             'history':history
         }

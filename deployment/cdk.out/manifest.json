@@ -1,0 +1,1151 @@
+{
+  "version": "29.0.0",
+  "artifacts": {
+    "OpenSearchStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "OpenSearchStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "OpenSearchStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://513489159680/us-east-1",
+      "properties": {
+        "templateFile": "OpenSearchStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-deploy-role-513489159680-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-cfn-exec-role-513489159680-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-513489159680-us-east-1/4ae8b7f40e9733bb649163a773f3b10bed7b1a72e0e905f590bd63a2fb7e76fb.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "OpenSearchStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-lookup-role-513489159680-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "OpenSearchStack.assets"
+      ],
+      "metadata": {
+        "/OpenSearchStack/OpenSearchMasterUserSecret/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OpenSearchMasterUserSecret1DDEC2E1"
+          }
+        ],
+        "/OpenSearchStack/OpenSearch": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": "smartsearch"
+          }
+        ],
+        "/OpenSearchStack/OpenSearch/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OpenSearch587998CD"
+          }
+        ],
+        "/OpenSearchStack/OpenSearch/AccessPolicy/Resource/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OpenSearchAccessPolicy97C4D347"
+          }
+        ],
+        "/OpenSearchStack/OpenSearch/AccessPolicy/CustomResourcePolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OpenSearchAccessPolicyCustomResourcePolicyC1E4D7B9"
+          }
+        ],
+        "/OpenSearchStack/AWS679f53fac002430cb0da5b7982bd2287/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2"
+          }
+        ],
+        "/OpenSearchStack/AWS679f53fac002430cb0da5b7982bd2287/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AWS679f53fac002430cb0da5b7982bd22872D164C4C"
+          }
+        ],
+        "/OpenSearchStack/OPSDomainEndpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OPSDomainEndpoint"
+          }
+        ],
+        "/OpenSearchStack/OPSDashboardsURL": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OPSDashboardsURL"
+          }
+        ],
+        "/OpenSearchStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/OpenSearchStack/Exports/Output{\"Fn::GetAtt\":[\"OpenSearch587998CD\",\"DomainEndpoint\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttOpenSearch587998CDDomainEndpointBD9D8E0C"
+          }
+        ],
+        "/OpenSearchStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/OpenSearchStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "OpenSearchStack"
+    },
+    "ChatBotStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ChatBotStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ChatBotStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://513489159680/us-east-1",
+      "properties": {
+        "templateFile": "ChatBotStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-deploy-role-513489159680-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-cfn-exec-role-513489159680-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-513489159680-us-east-1/c8fe14fa1028d956ba64c81d678848a4e500a124e76a298434c8d80e9f5b6104.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ChatBotStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-lookup-role-513489159680-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "ChatBotStack.assets"
+      ],
+      "metadata": {
+        "/ChatBotStack/chat_bot_role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotroleE9EB5A36"
+          }
+        ],
+        "/ChatBotStack/chat_bot_role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotroleDefaultPolicyC9B89CD3"
+          }
+        ],
+        "/ChatBotStack/IRLambdaLayer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "IRLambdaLayerEB8A96C5"
+          }
+        ],
+        "/ChatBotStack/chat_bot/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbot21A82399"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapi8B128757"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapiCloudWatchRole2656A4C2"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapiAccount7DC84713"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapiDeployment95C7FE726ded5b10a87c2e06b5cdb077b02aad22"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapiDeploymentStageprod37AAA4B6"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapiEndpoint48891444"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Default/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapiOPTIONS2F7D8327"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Default/chat_bot/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapichatbotE29E4705"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Default/chat_bot/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapichatbotOPTIONSF24F7CD3"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Default/chat_bot/GET/ApiPermission.ChatBotStackchatbotapi754064FE.GET..chat_bot": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapichatbotGETApiPermissionChatBotStackchatbotapi754064FEGETchatbot7417C83F"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Default/chat_bot/GET/ApiPermission.Test.ChatBotStackchatbotapi754064FE.GET..chat_bot": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapichatbotGETApiPermissionTestChatBotStackchatbotapi754064FEGETchatbot7282A841"
+          }
+        ],
+        "/ChatBotStack/chat-bot-api/Default/chat_bot/GET/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatbotapichatbotGET897926BA"
+          }
+        ],
+        "/ChatBotStack/chat_session_table/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chatsessiontableF36CEC4D"
+          }
+        ],
+        "/ChatBotStack/dynamodb_role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "dynamodbroleEC592DC2"
+          }
+        ],
+        "/ChatBotStack/dynamodb_role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "dynamodbroleDefaultPolicyADAA434A"
+          }
+        ],
+        "/ChatBotStack/chat_table_name": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "chattablename"
+          }
+        ],
+        "/ChatBotStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ChatBotStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ChatBotStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ChatBotStack"
+    },
+    "BedrockStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "BedrockStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "BedrockStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://513489159680/us-east-1",
+      "properties": {
+        "templateFile": "BedrockStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-deploy-role-513489159680-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-cfn-exec-role-513489159680-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-513489159680-us-east-1/8ea429474163d2b3cf8522c8d63902135884b5cf321901b4fdf74afdf46bb133.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "BedrockStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-lookup-role-513489159680-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "BedrockStack.assets"
+      ],
+      "metadata": {
+        "/BedrockStack/bedrock_role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockrole634D9AD9"
+          }
+        ],
+        "/BedrockStack/bedrock_role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockroleDefaultPolicy6EE3CA0F"
+          }
+        ],
+        "/BedrockStack/BedrockLayer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BedrockLayerF103F936"
+          }
+        ],
+        "/BedrockStack/bedrock_invoke/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvoke2C7C1563"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapi93E2D4EE"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapiCloudWatchRoleE1ABD1CB"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapiAccountF3F0E2B7"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapiDeployment08540B17936f2d1ee0ce5a31f58511e7599f1dbf"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapiDeploymentStageprodC2DA71A9"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapiEndpointAAC3FAEB"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Default/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapiOPTIONSAFF864B7"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Default/bedrock/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapibedrock4F9DE895"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Default/bedrock/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapibedrockOPTIONS0657C17E"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Default/bedrock/GET/ApiPermission.BedrockStackbedrockinvokeapi9F5F3727.GET..bedrock": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapibedrockGETApiPermissionBedrockStackbedrockinvokeapi9F5F3727GETbedrock7D680CFE"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Default/bedrock/GET/ApiPermission.Test.BedrockStackbedrockinvokeapi9F5F3727.GET..bedrock": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapibedrockGETApiPermissionTestBedrockStackbedrockinvokeapi9F5F3727GETbedrock53627AB1"
+          }
+        ],
+        "/BedrockStack/bedrock-invoke-api/Default/bedrock/GET/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "bedrockinvokeapibedrockGET4CEAF04E"
+          }
+        ],
+        "/BedrockStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/BedrockStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/BedrockStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "BedrockStack"
+    },
+    "ProductSearchStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ProductSearchStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ProductSearchStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://513489159680/us-east-1",
+      "properties": {
+        "templateFile": "ProductSearchStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-deploy-role-513489159680-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-cfn-exec-role-513489159680-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-513489159680-us-east-1/bf8d69a28381962c0fa0250f7076b7a2681b4b45eba75daf4ce1fcb94ac8192a.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ProductSearchStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-lookup-role-513489159680-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "OpenSearchStack",
+        "ProductSearchStack.assets"
+      ],
+      "metadata": {
+        "/ProductSearchStack/product_search_role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchrole93AE4486"
+          }
+        ],
+        "/ProductSearchStack/product_search_role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchroleDefaultPolicy4CF52A56"
+          }
+        ],
+        "/ProductSearchStack/IRLambdaLayer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "IRLambdaLayerEB8A96C5"
+          }
+        ],
+        "/ProductSearchStack/product_search/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearch4F722146"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiDC129EE3"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiCloudWatchRoleCB1616C7"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiAccount76BAC20D"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiDeploymentC999AF938a2ad7537a62fc9406b56d52dee8cd3f"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiDeploymentStageprod662C3B15"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiEndpointD8CEDDEC"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Default/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiOPTIONS1D34EF72"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Default/product_search/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiproductsearch75A35B45"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Default/product_search/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiproductsearchOPTIONS052E44A1"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Default/product_search/GET/ApiPermission.ProductSearchStackproductsearchapi62845C3C.GET..product_search": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiproductsearchGETApiPermissionProductSearchStackproductsearchapi62845C3CGETproductsearch2BD826B7"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Default/product_search/GET/ApiPermission.Test.ProductSearchStackproductsearchapi62845C3C.GET..product_search": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiproductsearchGETApiPermissionTestProductSearchStackproductsearchapi62845C3CGETproductsearch302F4924"
+          }
+        ],
+        "/ProductSearchStack/product-search-api/Default/product_search/GET/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "productsearchapiproductsearchGETE98B9226"
+          }
+        ],
+        "/ProductSearchStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ProductSearchStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ProductSearchStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ProductSearchStack"
+    },
+    "PersonalizeRankingStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "PersonalizeRankingStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "PersonalizeRankingStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://513489159680/us-east-1",
+      "properties": {
+        "templateFile": "PersonalizeRankingStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-deploy-role-513489159680-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-cfn-exec-role-513489159680-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-513489159680-us-east-1/b37830f47def2257f9b31c0d8529d17ca10656b25729ebebf734b9f84aba6fd9.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "PersonalizeRankingStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-lookup-role-513489159680-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "PersonalizeRankingStack.assets"
+      ],
+      "metadata": {
+        "/PersonalizeRankingStack/personalize_ranking_role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingrole8515CA40"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize_ranking_role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingroleDefaultPolicyB0BB38AD"
+          }
+        ],
+        "/PersonalizeRankingStack/IRLambdaLayer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "IRLambdaLayerEB8A96C5"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize_ranking/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizeranking84EF7F7E"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapi0E22D5B5"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapiCloudWatchRole0485342B"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapiAccount026CE90E"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapiDeployment26A02B36b6e8ba4553a69368a47f7aa1624a11fc"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapiDeploymentStageprod7CABFC3F"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapiEndpoint1C8DAFDA"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Default/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapiOPTIONS08E9424D"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Default/personalize_ranking/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapipersonalizerankingB8C49258"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Default/personalize_ranking/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapipersonalizerankingOPTIONS367B9A9B"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Default/personalize_ranking/GET/ApiPermission.PersonalizeRankingStackpersonalizerankingapi31958492.GET..personalize_ranking": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapipersonalizerankingGETApiPermissionPersonalizeRankingStackpersonalizerankingapi31958492GETpersonalizerankingD38EBA7D"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Default/personalize_ranking/GET/ApiPermission.Test.PersonalizeRankingStackpersonalizerankingapi31958492.GET..personalize_ranking": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapipersonalizerankingGETApiPermissionTestPersonalizeRankingStackpersonalizerankingapi31958492GETpersonalizeranking4924AB36"
+          }
+        ],
+        "/PersonalizeRankingStack/personalize-ranking-api/Default/personalize_ranking/GET/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "personalizerankingapipersonalizerankingGET81983D37"
+          }
+        ],
+        "/PersonalizeRankingStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/PersonalizeRankingStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/PersonalizeRankingStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "PersonalizeRankingStack"
+    },
+    "AdsStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "AdsStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "AdsStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://513489159680/us-east-1",
+      "properties": {
+        "templateFile": "AdsStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-deploy-role-513489159680-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-cfn-exec-role-513489159680-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-513489159680-us-east-1/3eff53af3db4226bb21c70b1d4aaafb2a9f054dd3fdc8064f2857cb9d208bb1c.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "AdsStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-lookup-role-513489159680-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "AdsStack.assets"
+      ],
+      "metadata": {
+        "/AdsStack/ads_role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsroleE0FA41B8"
+          }
+        ],
+        "/AdsStack/ads_role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsroleDefaultPolicy1806F346"
+          }
+        ],
+        "/AdsStack/IRLambdaLayer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "IRLambdaLayerEB8A96C5"
+          }
+        ],
+        "/AdsStack/get_item_ads/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getitemadsA0346556"
+          }
+        ],
+        "/AdsStack/ads-api/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapi0511FBEE"
+          }
+        ],
+        "/AdsStack/ads-api/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapiCloudWatchRoleD2F10DF0"
+          }
+        ],
+        "/AdsStack/ads-api/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapiAccount323407C1"
+          }
+        ],
+        "/AdsStack/ads-api/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapiDeployment17F3E8D1920d5d70177e7f9d2779fe2d06eb7f32"
+          }
+        ],
+        "/AdsStack/ads-api/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapiDeploymentStageprod6F5B2A08"
+          }
+        ],
+        "/AdsStack/ads-api/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapiEndpoint7B13BF21"
+          }
+        ],
+        "/AdsStack/ads-api/Default/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapiOPTIONS1F3D5E31"
+          }
+        ],
+        "/AdsStack/ads-api/Default/get_item_ads/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapigetitemads7F0C2305"
+          }
+        ],
+        "/AdsStack/ads-api/Default/get_item_ads/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapigetitemadsOPTIONS8CD00959"
+          }
+        ],
+        "/AdsStack/ads-api/Default/get_item_ads/GET/ApiPermission.AdsStackadsapi0E1746CD.GET..get_item_ads": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapigetitemadsGETApiPermissionAdsStackadsapi0E1746CDGETgetitemads8FF62348"
+          }
+        ],
+        "/AdsStack/ads-api/Default/get_item_ads/GET/ApiPermission.Test.AdsStackadsapi0E1746CD.GET..get_item_ads": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapigetitemadsGETApiPermissionTestAdsStackadsapi0E1746CDGETgetitemads169C7ABE"
+          }
+        ],
+        "/AdsStack/ads-api/Default/get_item_ads/GET/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "adsapigetitemadsGET89C7E317"
+          }
+        ],
+        "/AdsStack/retail_user_table/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "retailusertable9836B5C5"
+          }
+        ],
+        "/AdsStack/retail_item_table/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "retailitemtable624AB3CD"
+          }
+        ],
+        "/AdsStack/dynamodb_role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "dynamodbroleEC592DC2"
+          }
+        ],
+        "/AdsStack/dynamodb_role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "dynamodbroleDefaultPolicyADAA434A"
+          }
+        ],
+        "/AdsStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/AdsStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/AdsStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "AdsStack"
+    },
+    "UserInfoStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "UserInfoStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "UserInfoStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://513489159680/us-east-1",
+      "properties": {
+        "templateFile": "UserInfoStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-deploy-role-513489159680-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-cfn-exec-role-513489159680-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-513489159680-us-east-1/df0a618ab9a85993fe86cda7a77670f84bd6d94ed70c6753563901842cca95a4.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "UserInfoStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-lookup-role-513489159680-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "UserInfoStack.assets"
+      ],
+      "metadata": {
+        "/UserInfoStack/user_info_role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "userinforoleAA46879C"
+          }
+        ],
+        "/UserInfoStack/user_info_role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "userinforoleDefaultPolicy3D5A8677"
+          }
+        ],
+        "/UserInfoStack/IRLambdaLayer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "IRLambdaLayerEB8A96C5"
+          }
+        ],
+        "/UserInfoStack/get_user_info/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfo1A1383D6"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapi44608789"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiCloudWatchRoleB9B0F6A5"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiAccountAA71E4A5"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiDeployment179E52077433640f78a2bbe6e90ec0d6dab9f509"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiDeploymentStageprod9DA4DA30"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiEndpointA218BEDD"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Default/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiOPTIONS9DF538F6"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Default/user_info/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiuserinfo4467FD71"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Default/user_info/OPTIONS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiuserinfoOPTIONSD84D2DBA"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Default/user_info/GET/ApiPermission.UserInfoStackgetuserinfoapi1B16D73B.GET..user_info": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiuserinfoGETApiPermissionUserInfoStackgetuserinfoapi1B16D73BGETuserinfo12CEB051"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Default/user_info/GET/ApiPermission.Test.UserInfoStackgetuserinfoapi1B16D73B.GET..user_info": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiuserinfoGETApiPermissionTestUserInfoStackgetuserinfoapi1B16D73BGETuserinfo7A8D4F5B"
+          }
+        ],
+        "/UserInfoStack/get-user-info-api/Default/user_info/GET/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "getuserinfoapiuserinfoGET2057EABC"
+          }
+        ],
+        "/UserInfoStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/UserInfoStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/UserInfoStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "UserInfoStack"
+    },
+    "NotebookStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "NotebookStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "NotebookStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://513489159680/us-east-1",
+      "properties": {
+        "templateFile": "NotebookStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-deploy-role-513489159680-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-cfn-exec-role-513489159680-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-513489159680-us-east-1/e5245b2ec02b6753073f417a391b9c3cc9e1dc9b5b40e9a058b3a789c43a1096.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "NotebookStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::513489159680:role/cdk-hnb659fds-lookup-role-513489159680-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "OpenSearchStack",
+        "NotebookStack.assets"
+      ],
+      "metadata": {
+        "/NotebookStack/OpenSearchHostURLSecret/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OpenSearchHostURLSecret0AB35B33"
+          }
+        ],
+        "/NotebookStack/OpenSearchIndexNameSecret/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OpenSearchIndexNameSecret0A9398B2"
+          }
+        ],
+        "/NotebookStack/ShoppingGuideNotebookRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ShoppingGuideNotebookRoleDD7B0C0E"
+          }
+        ],
+        "/NotebookStack/SmartSearch-LifeCycleConfig": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SmartSearchLifeCycleConfig"
+          }
+        ],
+        "/NotebookStack/ShoppingGuideNotebook": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ShoppingGuideNotebook"
+          }
+        ],
+        "/NotebookStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/NotebookStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/NotebookStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "NotebookStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}

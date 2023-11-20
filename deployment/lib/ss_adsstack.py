@@ -17,7 +17,7 @@ class AdsStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
         
-        llm_embedding_name = self.node.try_get_context("llm_embedding_name")
+        llm_endpoint_name = self.node.try_get_context("llm_endpoint_name")
         
     # configure the lambda role
         _ads_role_policy = iam.PolicyStatement(
@@ -25,6 +25,8 @@ class AdsStack(Stack):
                 'sagemaker:InvokeEndpointAsync',
                 'sagemaker:InvokeEndpoint',
                 'lambda:AWSLambdaBasicExecutionRole',
+                'lambda:InvokeFunction',
+                'secretsmanager:SecretsManagerReadWrite'
             ],
             resources=['*']
         )
@@ -46,7 +48,7 @@ class AdsStack(Stack):
                 # add intelligent recommendation lambda
         ads_layer = _lambda.LayerVersion(
           self, 'IRLambdaLayer',
-          code=_lambda.Code.from_asset('../lambda_layer_folder'),
+          code=_lambda.Code.from_asset('../lambda/lambda_layer_folder'),
           compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
           description='IR Library'
         )
@@ -63,7 +65,7 @@ class AdsStack(Stack):
             timeout=Duration.minutes(10),
             reserved_concurrent_executions=100
         )
-        ads_function.add_environment("llm_embedding_name", llm_embedding_name)
+        ads_function.add_environment("llm_endpoint_name", llm_endpoint_name)
         
         qa_api = apigw.RestApi(self, 'ads-api',
                                default_cors_preflight_options=apigw.CorsOptions(

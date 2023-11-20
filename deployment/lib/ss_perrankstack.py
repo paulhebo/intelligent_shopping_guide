@@ -50,7 +50,7 @@ class PersonalizeRankingStack(Stack):
                 # add intelligent recommendation lambda
         personalize_layer = _lambda.LayerVersion(
           self, 'IRLambdaLayer',
-          code=_lambda.Code.from_asset('../lambda_layer_folder'),
+          code=_lambda.Code.from_asset('../lambda/lambda_layer_folder'),
           compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
           description='IR Library'
         )
