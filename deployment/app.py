@@ -9,7 +9,7 @@ from lib.ss_adsstack import AdsStack
 from lib.ss_userstack import UserInfoStack
 from lib.ss_bedrockstack import BedrockStack
 from lib.ss_notebook import NotebookStack
-
+from lib.ss_asrstack import ASRStack
 
 ACCOUNT = os.getenv('AWS_ACCOUNT_ID', '')
 REGION = os.getenv('AWS_REGION', '')
@@ -18,15 +18,21 @@ env = AWS_ENV
 print(env)
 app = cdk.App()
 
-
 searchstack = OpenSearchStack(app, "OpenSearchStack", env=env)
 search_engine_key = searchstack.search_domain_endpoint
-chatstack = ChatBotStack(app, "ChatBotStack",env=env)
-bedrockstack = BedrockStack( app, "BedrockStack", env=env)
-prstack = ProductRecommedationStack(app, "ProductRecommedationStack",search_engine_key=search_engine_key,env=env)
+chatstack = ChatBotStack(app, "ChatBotStack", env=env)
+bedrockstack = BedrockStack(app, "BedrockStack", env=env)
+prstack = ProductRecommedationStack(app, "ProductRecommedationStack", search_engine_key=search_engine_key, env=env)
 notebookstack = NotebookStack(app, "NotebookStack", search_engine_key=search_engine_key, env=env)
-prerankstack = PersonalizeRankingStack(app,"PersonalizeRankingStack",env=env)
-adsstack = AdsStack(app,"AdsStack",env=env)
-userstack = UserInfoStack(app,"UserInfoStack",env=env)
+prerankstack = PersonalizeRankingStack(app, "PersonalizeRankingStack", env=env)
+adsstack = AdsStack(app, "AdsStack", env=env)
+userstack = UserInfoStack(app, "UserInfoStack", env=env)
+
+"""
+    Deploy ASR (Automatic Speech Recognition Stack
+"""
+if (app.node.try_get_context("enable_asr_model_feature") or app.node.try_get_context(
+        "enable_asr_model_feature") == 'true'):
+    ASRStack(app, 'ASRStack', env=env)
 
 app.synth()
