@@ -23,7 +23,7 @@ searchstack = OpenSearchStack(app, "OpenSearchStack", env=env)
 search_engine_key = searchstack.search_domain_endpoint
 chatstack = ChatBotStack(app, "ChatBotStack",env=env)
 bedrockstack = BedrockStack( app, "BedrockStack", env=env)
-searchstack = ProductSearchStack(app, "ProductSearchStack",search_engine_key=search_engine_key,env=env)
+productsearchstack = ProductSearchStack(app, "ProductSearchStack",search_engine_key=search_engine_key,env=env)
 prerankstack = PersonalizeRankingStack(app,"PersonalizeRankingStack",env=env)
 adsstack = AdsStack(app,"AdsStack",env=env)
 userstack = UserInfoStack(app,"UserInfoStack",env=env)
