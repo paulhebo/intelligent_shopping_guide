@@ -36,10 +36,10 @@ def lambda_handler(event, context):
     
     userId = -1
     if "userId" in event.keys():
-        userId = event['userId']
+        userId = int(event['userId'])
     elif "queryStringParameters" in event.keys():
         if "userId" in evt_body.keys():
-            userId = evt_body['userId'].strip()
+            userId = int(evt_body['userId'].strip())
     print('userId:',userId)
 
     itemIdList = ""
@@ -72,7 +72,7 @@ def lambda_handler(event, context):
             items_Info_text = evt_body['itemInfo']
 
     if userId > 0:
-        userInfo = get_table_info(userTable, userId, 'user')
+        userInfo = get_table_info(userTable, str(userId), 'user')
         user_base_info = ''
         history_item_info = ''
         print('user_info:',userInfo)
@@ -97,6 +97,7 @@ def lambda_handler(event, context):
     modelType = 'normal'
     if "modelType" in evt_body.keys():
         modelType = evt_body['modelType']
+    print('modelType:',modelType)
   
     apiUrl = ''
     if "apiUrl" in evt_body.keys():
@@ -129,6 +130,17 @@ def lambda_handler(event, context):
     language=LANGUAGE
     if "language" in evt_body.keys():
         language = evt_body['language']
+    print('language:',language)
+    
+    task = ''
+    if modelType == 'llama2':
+        task = 'ads-sys'
+    else:
+        task = 'ads'
+    prompt_template = get_prompt_template(language,modelType,task)
+    if "prompt" in evt_body.keys():
+        prompt_template = evt_body['prompt']
+    print('prompt_template:',prompt_template)
         
     try:
         chat_bot = ShoppingGuideChatBot()
@@ -144,18 +156,15 @@ def lambda_handler(event, context):
                          maxTokens
                          )
         if modelType == 'llama2':
-            system_content = get_prompt_template(language,modelType,'ads-sys')
             query = get_prompt_template(language,modelType,'ads-chat')
-            print('system_content',system_content)
             print('query',query)
             itemAds = chat_bot.get_item_ads_llama2(query,
                                                   items_Info_text,
                                                   user_base_info,
                                                   history_item_info,
-                                                  system_content
+                                                  prompt_template
                                                   )
         else:
-            prompt_template = get_prompt_template(language,modelType,'ads')
             itemAds = chat_bot.get_item_ads(
                                       query,
                                       prompt_template,
