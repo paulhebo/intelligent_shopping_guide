@@ -1,1 +1,7 @@
-/home/ec2-user/environment/intelligent_shopping_guide/deployment/cdk.out
+*.DS_Store
+deployment/cdk.out
+deployment/node_module
+deployment/lib/__pycache__
+*.pyc
+.idea/
+.~*.py

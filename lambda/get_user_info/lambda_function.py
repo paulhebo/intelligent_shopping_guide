@@ -1,12 +1,12 @@
 import os
 import json
 from session import get_table_info
+TABLE_NAME = os.environ.get('dynamodb_table_name')
 
 
 def lambda_handler(event, context):
     
     print("event:",event)
-    
     evt_body = event['queryStringParameters']
     
     user_table_name = ''

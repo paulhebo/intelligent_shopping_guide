@@ -86,7 +86,11 @@ def lambda_handler(event, context):
     item_info_dict = item_metadatas
     if len(itemFilterId) > 0:
         item_filter_id_list = itemFilterId.split(',')
-        item_id_list, item_info_dict = zip(*((item_id, item_info) for item_id, item_info in zip(item_id_list, item_metadatas) if item_id not in item_filter_id_list))
+        if len(list(set(item_id_list)-set(item_filter_id_list))) == 0:
+            item_id_list = []
+            item_info_dict = {}
+        else:
+            item_id_list, item_info_dict = zip(*((item_id, item_info) for item_id, item_info in zip(item_id_list, item_metadatas) if item_id not in item_filter_id_list))
     
     print('items_info:',item_info_dict)
     

@@ -68,6 +68,14 @@ class ShoppingGuideChatBot:
                     "secret_key":secret_key,
                 }
                 self.llm.model_kwargs = parameters
+            elif model_name.find('chatglm') >= 0:
+                api_url = ''
+                self.llm = AmazonAPIGateway(api_url=api_url)
+                parameters={
+                    "modelId":model_name,
+                    "api_key":api_key,
+                }
+                self.llm.model_kwargs = parameters
         else:
             self.llm = init_model(llm_endpoint_name,region,temperature)
             

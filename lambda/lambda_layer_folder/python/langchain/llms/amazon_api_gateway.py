@@ -9,6 +9,8 @@ from langchain.pydantic_v1 import Extra
 import json
 import time
 import hashlib
+import zhipuai
+
 def calculate_md5(input_string):
     md5 = hashlib.md5()
     md5.update(input_string.encode('utf-8'))
@@ -51,6 +53,10 @@ class ContentHandlerAmazonAPIGateway:
     def transform_output_baichuan(cls, response: Any) -> str:
         print('response text:',json.loads(response.text))
         return json.loads(response.text)['data']['messages'][0]['content']
+        
+    @classmethod
+    def transform_output_chatglm(cls, response: Any) -> str:
+        return response['data']['choices'][0]['content'][1:-1].strip()
     
 
 class AmazonAPIGateway(LLM):
@@ -131,23 +137,30 @@ class AmazonAPIGateway(LLM):
                 "X-BC-Signature": signature,
                 "X-BC-Sign-Algo": "MD5",
             }
-            
-        else:
-            payload = self.content_handler.transform_input(prompt, _model_kwargs)
-
-        try:
-            response = requests.post(
-                self.api_url,
-                headers=self.headers,
-                json=payload,
-            )
-            if modelId.find('Baichuan') >= 0:
+            try:
+                response = requests.post(
+                    self.api_url,
+                    headers=self.headers,
+                    json=payload,
+                )
                 text = self.content_handler.transform_output_baichuan(response)
-            else:
-                text = self.content_handler.transform_output(response)
-
-        except Exception as error:
-            raise ValueError(f"Error raised by the service: {error}")
+            except Exception as error:
+                raise ValueError(f"Error raised by the service: {error}")
+            
+        elif modelId.find('chatglm') >= 0:
+            api_key = _model_kwargs['api_key']
+            zhipuai.api_key = api_key
+            try:
+                response = zhipuai.model_api.invoke(
+                    model=modelId,
+                    prompt=[
+                        {"role": "user", "content": prompt},
+                    ]
+                )
+                text = self.content_handler.transform_output_chatglm(response)
+                
+            except Exception as error:
+                raise ValueError(f"Error raised by the service: {error}")
 
         if stop is not None:
             text = enforce_stop_tokens(text, stop)
