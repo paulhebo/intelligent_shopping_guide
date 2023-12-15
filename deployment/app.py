@@ -22,11 +22,16 @@ app = cdk.App()
 searchstack = OpenSearchStack(app, "OpenSearchStack2", env=env)
 search_engine_key = searchstack.search_domain_endpoint
 chatstack = ChatBotStack(app, "ChatBotStack",env=env)
-bedrockstack = BedrockStack( app, "BedrockStack", env=env)
-productsearchstack = ProductSearchStack(app, "ProductSearchStack",search_engine_key=search_engine_key,env=env)
-prerankstack = PersonalizeRankingStack(app,"PersonalizeRankingStack",env=env)
 adsstack = AdsStack(app,"AdsStack",env=env)
-userstack = UserInfoStack(app,"UserInfoStack",env=env)
+productsearchstack = ProductSearchStack(app, "ProductSearchStack",search_engine_key=search_engine_key,env=env)
 notebookstack = NotebookStack(app, "NotebookStack", search_engine_key=search_engine_key, env=env)
+
+if app.node.try_get_context('use_bedrock'):
+    bedrockstack = BedrockStack( app, "BedrockStack", env=env)
+if app.node.try_get_context('personalize'):
+    prerankstack = PersonalizeRankingStack(app,"PersonalizeRankingStack",env=env)
+if app.node.try_get_context('get_userinfo'):
+    userstack = UserInfoStack(app,"UserInfoStack",env=env)
+
 
 app.synth()
