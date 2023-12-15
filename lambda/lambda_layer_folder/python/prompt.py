@@ -4,13 +4,12 @@ from langchain.prompts.prompt import PromptTemplate
 #chinese
 CHINESE_CHAT = """你是一个助手，请根据多个维度，回复用户的问题。
 
-    {history}
-    用户提问: {human_input}
+    用户提问: {question}
     用户需求:""" 
 
 CHINESE_SUMMARIZE = """请根据用户的问题，从各个维度总结客户的需求。
     
-    用户提问: {human_input}
+    用户提问: {question}
     用户需求:"""
     
 CHINESE_ADS = """请根据用户的需求，生成商品信息的广告词。
@@ -22,13 +21,12 @@ CHINESE_ADS = """请根据用户的需求，生成商品信息的广告词。
 #chinese_tc
 CHINESE_TC_CHAT = """你是一個助手，請根據多個維度，回復用戶的問題。
 
-    {history}
-    用戶提問: {human_input}
+    用戶提問: {question}
     用戶需求:""" 
 
 CHINESE_TC_SUMMARIZE = """请根据用户的问题，从各个维度总结客户的需求。
 
-    用戶提問: {human_input}
+    用戶提問: {question}
     用戶需求:"""
     
 CHINESE_TC_ADS = """請根據用戶的需求，生成商品信息的廣告詞。
@@ -112,15 +110,13 @@ LLAMA2_ADS_CHAT_TEMPLATE="Based on the user's shopping history,Please create adv
 
 #english
 ENGLISH_CHAT = """You are an assistant, Refer to the following conversation history to answer questions from users.
-       
-            {history}
           
-            user's question: {human_input}
+            user's question: {question}
             Answer:""" 
 
 ENGLISH_SUMMARIZE = """According to the user's problem, summarize the customer's needs from various dimensions.
        
-            user's question: {human_input}
+            user's question: {question}
             Answer:""" 
 
 

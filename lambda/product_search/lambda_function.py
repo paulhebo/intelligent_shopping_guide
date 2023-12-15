@@ -7,7 +7,10 @@ from datetime import datetime
 import time
 from model import init_embeddings,init_vector_store
 from chat_bot import *
-from prompt import *
+from search_prompt import get_examples
+from search_metadata import *
+from langchain.vectorstores import MyScale,MyScaleSettings
+from langchain.retrievers.self_query.base import SelfQueryRetriever
 
 EMBEDDING_ENDPOINT_NAME = os.environ.get('embedding_endpoint_name')
 LLM_ENDPOINT_NAME = os.environ.get('llm_embedding_name')
@@ -16,7 +19,6 @@ INDEX =  os.environ.get('index')
 host =  os.environ.get('host')
 LANGUAGE =  os.environ.get('language')
 port = 443
-lambda_client = boto3.client('lambda')
 
 response = {
     "statusCode": 200,
@@ -25,6 +27,42 @@ response = {
     },
     "isBase64Encoded": False
 }
+
+def get_retriever(database,vector_store,region,
+                 sagemakerEndpoint: str = 'pytorch-inference-llm-v1',
+                 temperature: float = 0.01,
+                 modelType:str = "normal",
+                 apiUrl:str = "",
+                 modelName:str="anthropic.claude-v2",
+                 apiKey:str = "",
+                 secretKey:str = "",
+                 maxTokens:int=512,
+                 ):
+                        
+    metadata_field_info = get_metadata_field_info(database)
+    document_content_description = get_document_content_description()
+    
+    chain_kwargs = {}
+    chain_kwargs["examples"]=get_examples(database)
+    chat_bot = ShoppingGuideChatBot()
+    chat_bot.init_cfg(
+                     region,
+                     sagemakerEndpoint,
+                     temperature,
+                     modelType,
+                     apiUrl,
+                     modelName,
+                     apiKey,
+                     secretKey,
+                     maxTokens
+                     )
+    
+    retriever = SelfQueryRetriever.from_llm(
+        chat_bot.get_llm(), vector_store, document_content_description, metadata_field_info,
+        chain_kwargs=chain_kwargs,
+        verbose=True
+    )
+    return retriever
 
 def lambda_handler(event, context):
     
@@ -38,11 +76,42 @@ def lambda_handler(event, context):
         query = evt_body['query'].strip()
     print('query:',query)
 
+    vectorDatabase = 'opensearch'
+    if "vectorDatabase" in evt_body.keys():
+        vectorDatabase = evt_body['vectorDatabase']
+    print('vectorDatabase:',vectorDatabase)
     
-    index = INDEX
-    if "index" in evt_body.keys():
-        index = evt_body['index']
-    print('index:',index)
+    if vectorDatabase == 'opensearch':
+        index = INDEX
+        if "index" in evt_body.keys():
+            index = evt_body['index']
+        print('index:',index)
+        
+        searchType = 'vector'
+        if "searchType" in evt_body.keys():
+            searchType = evt_body['searchType']
+        print('searchType:',searchType)
+        
+    elif vectorDatabase == 'myscale':
+        myscaleHost = ''
+        if "myscaleHost" in evt_body.keys():
+            myscaleHost = evt_body['myscaleHost']
+        print('myscaleHost:',myscaleHost)
+        
+        myscalePort = ''
+        if "myscalePort" in evt_body.keys():
+            myscalePort = evt_body['myscalePort']
+        print('myscalePort:',myscalePort)
+        
+        myscaleUsername = ''
+        if "myscaleUsername" in evt_body.keys():
+            myscaleUsername = evt_body['myscaleUsername']
+        print('myscaleUsername:',myscaleUsername)
+        
+        myscalePassword = ''
+        if "myscalePassword" in evt_body.keys():
+            myscalePassword = evt_body['myscalePassword']
+        print('myscalePassword:',myscalePassword)
     
     embeddingEndpoint = EMBEDDING_ENDPOINT_NAME
     if "embeddingEndpoint" in evt_body.keys():
@@ -63,20 +132,86 @@ def lambda_handler(event, context):
         topK = int(evt_body['topK'])
     print('topK:',topK)
     
-    #1.get item info
-    sm_client = boto3.client('secretsmanager')
-    master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['SecretString']
-    data= json.loads(master_user)
-    username = data.get('username')
-    password = data.get('password')
+    
+    modelType = 'bedrock'
+    if "modelType" in evt_body.keys():
+        modelType = evt_body['modelType']
+  
+    apiUrl = ''
+    if "apiUrl" in evt_body.keys():
+        apiUrl = evt_body['apiUrl']
+  
+    apiKey = ''
+    if "apiKey" in evt_body.keys():
+        apiKey = evt_body['apiKey']
 
+    secretKey = ''
+    if "secretKey" in evt_body.keys():
+        secretKey = evt_body['secretKey']
+
+    modelName = 'anthropic.claude-v2'
+    if "modelName" in evt_body.keys():
+        modelName = evt_body['modelName']
+
+    maxTokens = 512
+    if "maxTokens" in evt_body.keys():
+        maxTokens = int(evt_body['maxTokens'])
+        
+    sagemakerEndpoint = LLM_ENDPOINT_NAME
+    if "sagemakerEndpoint" in evt_body.keys():
+        sagemakerEndpoint = evt_body['sagemakerEndpoint']
+    
+    temperature = 0.01
+    if "temperature" in evt_body.keys():
+        temperature = float(evt_body['temperature'])
+    
+    language=LANGUAGE
+    if "language" in evt_body.keys():
+        language = evt_body['language']
+    
     embeddings = init_embeddings(embeddingEndpoint,region,language= LANGUAGE)
-    vector_store=init_vector_store(embeddings,index,host,port,username,password)
+    if vectorDatabase == 'opensearch':
+        #1.get item info
+        sm_client = boto3.client('secretsmanager')
+        master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['SecretString']
+        data= json.loads(master_user)
+        username = data.get('username')
+        password = data.get('password')
+        vector_store=init_vector_store(embeddings,index,host,port,username,password)
+        
+        if searchType == 'vector':
+            docs = vector_store.similarity_search(query,k=topK)
+        elif searchType == 'selfQuery':
+            retriever = get_retriever(vectorDatabase,vector_store,
+                                         region,
+                                         sagemakerEndpoint,
+                                         temperature,
+                                         modelType,
+                                         apiUrl,
+                                         modelName,
+                                         apiKey,
+                                         secretKey,
+                                         maxTokens
+                                     )
+            docs = retriever.get_relevant_documents(query,k=topK)
+    elif vectorDatabase == 'myscale':
+        scaleSettings = MyScaleSettings(host=myscaleHost,port=myscalePort,username=myscaleUsername,password=myscalePassword)
+        vector_store = MyScale(embeddings,config=scaleSettings)
+        retriever = get_retriever(vectorDatabase,vector_store,
+                                     region,
+                                     sagemakerEndpoint,
+                                     temperature,
+                                     modelType,
+                                     apiUrl,
+                                     modelName,
+                                     apiKey,
+                                     secretKey,
+                                     maxTokens
+                                  )
+        docs = retriever.get_relevant_documents(query,k=topK)
     
-    
-    print('user intention:',query)
-    docs = vector_store.similarity_search_with_score(query,k=topK)
-    item_metadatas = [doc[0].metadata for doc in docs]
+    print('docs:',docs)
+    item_metadatas = [doc.metadata for doc in docs]
     print('item_metadatas:',item_metadatas)
     
     item_id_list = []

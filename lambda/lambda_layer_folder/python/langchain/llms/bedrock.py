@@ -87,7 +87,7 @@ class LLMInputOutputAdapter:
             input_body["inputText"] = prompt
             input_body["textGenerationConfig"] = {**model_kwargs}
         else:
-            input_body["prompt"] = prompt
+            input_body["inputText"] = prompt
 
         if provider == "anthropic" and "max_tokens_to_sample" not in input_body:
             input_body["max_tokens_to_sample"] = 256
@@ -240,12 +240,12 @@ class BedrockBase(BaseModel, ABC):
         **kwargs: Any,
     ) -> str:
         _model_kwargs = self.model_kwargs or {}
-
+        
         provider = self._get_provider()
         params = {**_model_kwargs, **kwargs}
         input_body = LLMInputOutputAdapter.prepare_input(provider, prompt, params)
         body = json.dumps(input_body)
-        accept = "application/json"
+        accept = "*/*"
         contentType = "application/json"
 
         try:
@@ -253,7 +253,7 @@ class BedrockBase(BaseModel, ABC):
                 body=body, modelId=self.model_id, accept=accept, contentType=contentType
             )
             text = LLMInputOutputAdapter.prepare_output(provider, response)
-
+            
         except Exception as e:
             raise ValueError(f"Error raised by bedrock service: {e}")
 
@@ -262,47 +262,6 @@ class BedrockBase(BaseModel, ABC):
 
         return text
 
-    def _input_and_invoke(
-            self,
-            prompt: str,
-            stop: Optional[List[str]] = None,
-            run_manager: Optional[CallbackManagerForLLMRun] = None,
-            **kwargs: Any,
-        ) -> str:
-        _model_kwargs = self.model_kwargs or {}
-        provider = self._get_provider()
-        params = {**_model_kwargs, **kwargs}
-        input_body = LLMInputOutputAdapter.prepare_input(provider, prompt, params)
-#         print('input_body:',input_body)
-        
-        try:
-            import json
-            import boto3
-
-            lambda_client = boto3.client('lambda')
-            
-            body={"queryStringParameters":input_body}
-            response = lambda_client.invoke(
-                        FunctionName = 'bedrock_invoke',
-                        InvocationType = 'RequestResponse',
-                        Payload = json.dumps(body)
-                    )
-            payload = response["Payload"].read().decode("utf-8")
-            payload = json.loads(payload)
-            body = json.loads(payload['body'])
-            text = body['answer']
-#             print('answer:',text)
-       
-        except Exception as e:
-            raise ValueError(f"Error raised by bedrock service: {e}")
-
-        if stop is not None:
-            text = enforce_stop_tokens(text, stop)
-
-        return text
-            
-            
-    
     def _prepare_input_and_invoke_stream(
         self,
         prompt: str,
@@ -443,8 +402,7 @@ class Bedrock(LLM, BedrockBase):
                 completion += chunk.text
             return completion
 
-        return self._input_and_invoke(prompt=prompt, stop=stop, **kwargs)
-#         return self._prepare_input_and_invoke(prompt=prompt, stop=stop, **kwargs)
+        return self._prepare_input_and_invoke(prompt=prompt, stop=stop, **kwargs)
 
     def get_num_tokens(self, text: str) -> int:
         if self._model_is_anthropic:

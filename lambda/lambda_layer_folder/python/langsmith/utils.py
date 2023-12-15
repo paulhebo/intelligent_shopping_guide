@@ -4,7 +4,7 @@ import functools
 import logging
 import os
 import subprocess
-from typing import Any, Callable, Dict, List, Mapping, Tuple, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import requests
 
@@ -13,31 +13,31 @@ from langsmith import schemas as ls_schemas
 _LOGGER = logging.getLogger(__name__)
 
 
-class LangSmithAPIError(Exception):
-    """An error occurred while communicating with the LangSmith API."""
-
-
-class LangSmithUserError(Exception):
-    """An error occurred while communicating with the LangSmith API."""
-
-
-class LangSmithRateLimitError(Exception):
-    """You have exceeded the rate limit for the LangSmith API."""
-
-
-class LangSmithAuthError(Exception):
-    """Couldn't authenticate with the LangSmith API."""
-
-
-class LangSmithNotFoundError(Exception):
-    """Couldn't find the requested resource."""
-
-
 class LangSmithError(Exception):
     """An error occurred while communicating with the LangSmith API."""
 
 
-class LangSmithConnectionError(Exception):
+class LangSmithAPIError(LangSmithError):
+    """Internal server error while communicating with LangSmith."""
+
+
+class LangSmithUserError(LangSmithError):
+    """User error caused an exception when communicating with LangSmith."""
+
+
+class LangSmithRateLimitError(LangSmithError):
+    """You have exceeded the rate limit for the LangSmith API."""
+
+
+class LangSmithAuthError(LangSmithError):
+    """Couldn't authenticate with the LangSmith API."""
+
+
+class LangSmithNotFoundError(LangSmithError):
+    """Couldn't find the requested resource."""
+
+
+class LangSmithConnectionError(LangSmithError):
     """Couldn't connect to the LangSmith API."""
 
 
@@ -250,3 +250,33 @@ def is_base_message_like(obj: object) -> bool:
             hasattr(obj, "type") and isinstance(getattr(obj, "type"), str),
         ]
     )
+
+
+def get_tracer_project(return_default_value=True) -> Optional[str]:
+    """Get the project name for a LangSmith tracer."""
+    return os.environ.get(
+        # Hosted LangServe projects get precedence over all other defaults.
+        # This is to make sure that we always use the associated project
+        # for a hosted langserve deployment even if the customer sets some
+        # other project name in their environment.
+        "HOSTED_LANGSERVE_PROJECT_NAME",
+        os.environ.get(
+            "LANGCHAIN_PROJECT",
+            os.environ.get(
+                # This is the legacy name for a LANGCHAIN_PROJECT, so it
+                # has lower precedence than LANGCHAIN_PROJECT
+                "LANGCHAIN_SESSION",
+                "default" if return_default_value else None,
+            ),
+        ),
+    )
+
+
+class FilterPoolFullWarning(logging.Filter):
+    """Filter urrllib3 warnings logged when the connection pool isn't reused."""
+
+    def filter(self, record) -> bool:
+        """urllib3.connectionpool:Connection pool is full, discarding connection: ..."""
+        return (
+            "Connection pool is full, discarding connection" not in record.getMessage()
+        )

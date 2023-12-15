@@ -1,11 +1,6 @@
 """Chain for chatting with a vector database."""
 from __future__ import annotations
 
-import json
-import requests
-import time
-from collections import defaultdict
-import os
 import inspect
 import warnings
 from abc import abstractmethod
@@ -37,90 +32,6 @@ CHAT_TURN_TYPE = Union[Tuple[str, str], BaseMessage]
 
 _ROLE_MAP = {"human": "Human: ", "ai": "Assistant: "}
 
-
-#add get aos search docs
-def _get_aos_docs(question,
-                  index,
-                  username,
-                  password,
-                  host,
-                  port,
-                  docs_num
-                  ) -> List[Document]:
-    num_output = 10
-    awsauth = (username, password)
-    source_includes = ["sentence","paragraph","metadata"]
-    fields = ["sentence"]
-    headers = { "Content-Type": "application/json" }
-    url = f'https://{host}/{index}/_search'
-    print("url:",url)
-    query = {
-    "size": num_output,
-      "_source": {
-          "includes": source_includes
-        },
-    'query': {
-      "multi_match": {
-        "query": question,
-        "fields": fields
-            }
-        }
-      }
-    #r = requests.post(host + index + '/_search', auth=awsauth, headers=headers, json=query)
-    r = requests.post(url, auth=awsauth, headers=headers, json=query)
-    r = json.loads(r.text)
-    clean = []
-    aos_docs = []
-    for hit in r['hits']['hits']:
-        document_score = float(hit['_score'])/10
-        document_paragraph = hit['_source']['paragraph']
-        document_metadata = hit['_source']['metadata']
-        document_sentence = hit['_source']['sentence']
-        if  document_paragraph  not in clean:
-           #Remove duplicate paragraph
-            clean.append(document_paragraph)
-            document_paragraph = "\n".join(document_paragraph)
-            document_sentence = "\n".join(document_sentence)
-            aos_docs.append(
-                            (Document(page_content=document_paragraph,metadata=document_metadata),
-                             document_score,
-                             document_sentence
-                            )
-                           )
-    aos_docs = sorted(aos_docs, key=lambda x: x[1], reverse=True)
-    aos_docs = aos_docs[:docs_num]
-    return aos_docs
-
-#add cal aos score
-def _cal_aos_docs_score(docs,
-                  aos_docs
-                  ) -> List[Document]:
-    num1 = 0
-    avg_point = 0
-    sum_point = 0
-    new_aos_docs = []
-    if len(docs) > 0 and len(aos_docs) > 0:
-        docs_pagecontent = [doc[0].page_content for doc in docs]
-        docs_scores = [doc[1] for doc in docs]
-        ori_aos_docs = [doc[0] for doc in aos_docs]
-        aos_docs_pagecontent = [doc[0].page_content for doc in aos_docs]
-        aos_docs_scores = [doc[1] for doc in aos_docs]
-        aos_docs_sentenct = [doc[2] for doc in aos_docs]
-        for i in range(len(docs_pagecontent)):
-            for i1 in range(len(aos_docs_pagecontent)):
-                if aos_docs_pagecontent[i1] == docs_pagecontent[i] and aos_docs_scores[i1] !=0:
-                    sum_point += docs_scores[i] / aos_docs_scores[i1]
-                    #print(docs_scores[i],aos_docs_scores[i1],sum_point)
-                    num1 += 1
-        if num1 !=0 and sum_point !=0:
-            avg_point = sum_point / num1
-            for i in range(len(aos_docs)):
-                new_aos_score = aos_docs_scores[i] * avg_point
-                new_aos_docs.append((ori_aos_docs[i],new_aos_score,aos_docs_sentenct[i]))
-                aos_docs = new_aos_docs
-    aos_docs = sorted(aos_docs, key=lambda x: x[1], reverse=True)
-    aos_docs = aos_docs[:3]
-    return aos_docs
 
 def _get_chat_history(chat_history: List[CHAT_TURN_TYPE]) -> str:
     buffer = ""
@@ -220,19 +131,6 @@ class BaseConversationalRetrievalChain(Chain):
     ) -> Dict[str, Any]:
         _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
         question = inputs["question"]
-        #add get index and aos parameters
-        index_name = inputs["index_name"]
-        aos_username = inputs["aos_username"]
-        aos_passwd = inputs["aos_passwd"]
-        aos_host = inputs["aos_host"]
-        aos_port = inputs["aos_port"]
-        search_engine = inputs["search_engine"]
-        search_method = inputs["search_method"]
-        txt_docs_num = int(inputs["txt_docs_num"])
-        self.response_if_no_docs_found = inputs["response_if_no_docs_found"]
-        vec_docs_score_thresholds = float(inputs["vec_docs_score_thresholds"])
-        txt_docs_score_thresholds = float(inputs["txt_docs_score_thresholds"])
-        
         get_chat_history = self.get_chat_history or _get_chat_history
         chat_history_str = get_chat_history(inputs["chat_history"])
 
@@ -246,85 +144,22 @@ class BaseConversationalRetrievalChain(Chain):
         accepts_run_manager = (
             "run_manager" in inspect.signature(self._get_docs).parameters
         )
-        vec_docs = []
-        aos_docs = []
-        if search_method != "text":
-            if accepts_run_manager:
-                vec_docs = self._get_docs(new_question, inputs, run_manager=_run_manager)
-            else:
-                vec_docs = self._get_docs(new_question, inputs)  # type: ignore[call-arg]
-            print('vec_docs:',vec_docs)
-        #add get aos docs
-        if search_engine == "opensearch" and search_method != "vector" and txt_docs_num > 0:
-            aos_docs = _get_aos_docs(new_question,index_name,aos_username,aos_passwd,aos_host,aos_port,txt_docs_num)
-            print('aos_docs:',aos_docs)
-        
+        if accepts_run_manager:
+            docs = self._get_docs(new_question, inputs, run_manager=_run_manager)
+        else:
+            docs = self._get_docs(new_question, inputs)  # type: ignore[call-arg]
         output: Dict[str, Any] = {}
-        if self.response_if_no_docs_found is not None and len(vec_docs+aos_docs) == 0:
+        if self.response_if_no_docs_found is not None and len(docs) == 0:
             output[self.output_key] = self.response_if_no_docs_found
         else:
-            new_vec_docs = []
-            new_aos_docs = []
-            if search_method != "text" and len(vec_docs) > 0 and vec_docs_score_thresholds > 0:              
-                for doc in vec_docs:
-                    if float(doc[1]) >= vec_docs_score_thresholds:
-                        new_vec_docs.append(doc)
-            else:
-                new_vec_docs = vec_docs
-                
-            if search_method != "vector" and len(aos_docs) > 0 and txt_docs_score_thresholds > 0:
-                for doc in aos_docs:
-                    if float(doc[1]) >= txt_docs_score_thresholds:
-                        new_aos_docs.append(doc)
-            else:
-                new_aos_docs = aos_docs
-            
-            if search_method == "text":
-                docs = new_aos_docs
-            elif search_method == "mix":
-                docs = new_vec_docs + new_aos_docs
-            else:
-                docs = new_vec_docs
-            print('last docs:',docs)
-            
-            if len(docs) == 0:
-                output[self.output_key] = self.response_if_no_docs_found
-            else:
-                new_inputs = inputs.copy()
-                if self.rephrase_question:
-                    new_inputs["question"] = new_question
-                new_inputs["chat_history"] = chat_history_str
-
-
-                deduplication_docs = docs
-                if len(docs) > 0 and isinstance (docs[0],tuple):
-                    ori_only_docs = [doc[0] for doc in docs]
-                    scores = [doc[1] for doc in docs]
-                    sentences = [doc[2] for doc in docs]
-                    new_docs_with_scores = []
-                    page_contents = []
-                    for i in range(len(ori_only_docs)):
-                        page_content = ori_only_docs[i].page_content
-                        if len(page_contents) > 0:
-                            find_flag = False
-                            for content in page_contents:
-                                if content == page_content:
-                                    find_flag = True
-                                    break
-                            if not find_flag:
-                                page_contents.append(page_content)
-                                new_docs_with_scores.append((ori_only_docs[i],scores[i],sentences[i]))
-                        else:
-                            page_contents.append(page_content)
-                            new_docs_with_scores.append((ori_only_docs[i],scores[i],sentences[i]))
-                    deduplication_docs = [doc[0] for doc in new_docs_with_scores]
-                    docs = new_docs_with_scores
-                    print('deduplication docs:',docs)
-
-                answer = self.combine_docs_chain.run(
-                    input_documents=deduplication_docs, callbacks=_run_manager.get_child(), **new_inputs
-                )
-                output[self.output_key] = answer
+            new_inputs = inputs.copy()
+            if self.rephrase_question:
+                new_inputs["question"] = new_question
+            new_inputs["chat_history"] = chat_history_str
+            answer = self.combine_docs_chain.run(
+                input_documents=docs, callbacks=_run_manager.get_child(), **new_inputs
+            )
+            output[self.output_key] = answer
 
         if self.return_source_documents:
             output["source_documents"] = docs
@@ -449,7 +284,7 @@ class ConversationalRetrievalChain(BaseConversationalRetrievalChain):
             self.combine_docs_chain, StuffDocumentsChain
         ):
             tokens = [
-                self.combine_docs_chain.llm_chain.llm.get_num_tokens(doc.page_content)
+                self.combine_docs_chain.llm_chain._get_num_tokens(doc.page_content)
                 for doc in docs
             ]
             token_count = sum(tokens[:num_docs])

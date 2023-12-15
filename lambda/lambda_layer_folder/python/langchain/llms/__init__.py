@@ -39,11 +39,6 @@ def _import_amazon_api_gateway() -> Any:
 
     return AmazonAPIGateway
 
-def _import_amazon_api_gateway_bedrock() -> Any:
-    from langchain.llms.amazon_api_gateway_bedrock import AmazonAPIGatewayBedrock
-
-    return AmazonAPIGatewayBedrock
-
 
 def _import_anthropic() -> Any:
     from langchain.llms.anthropic import Anthropic
@@ -516,8 +511,6 @@ def __getattr__(name: str) -> Any:
         return _import_aleph_alpha()
     elif name == "AmazonAPIGateway":
         return _import_amazon_api_gateway()
-    elif name == "AmazonAPIGatewayBedrock":
-        return _import_amazon_api_gateway_bedrock()
     elif name == "Anthropic":
         return _import_anthropic()
     elif name == "Anyscale":
@@ -686,7 +679,6 @@ __all__ = [
     "AI21",
     "AlephAlpha",
     "AmazonAPIGateway",
-    "AmazonAPIGatewayBedrock",
     "Anthropic",
     "Anyscale",
     "Arcee",
@@ -771,7 +763,6 @@ def get_type_to_cls_dict() -> Dict[str, Callable[[], Type[BaseLLM]]]:
         "ai21": _import_ai21,
         "aleph_alpha": _import_aleph_alpha,
         "amazon_api_gateway": _import_amazon_api_gateway,
-        "amazon_api_gateway_bedrock": AmazonAPIGatewayBedrock,
         "amazon_bedrock": _import_bedrock,
         "anthropic": _import_anthropic,
         "anyscale": _import_anyscale,

@@ -8,6 +8,7 @@ from langchain.chains.query_constructor.ir import (
     StructuredQuery,
     Visitor,
 )
+from langchain.chains.query_constructor.schema import VirtualColumnName
 
 
 class ChromaTranslator(Visitor):
@@ -34,11 +35,16 @@ class ChromaTranslator(Visitor):
         return {self._format_func(operation.operator): args}
 
     def visit_comparison(self, comparison: Comparison) -> Dict:
-        return {
-            comparison.attribute: {
-                self._format_func(comparison.comparator): comparison.value
-            }
-        }
+        if isinstance(comparison.attribute, VirtualColumnName):
+            attribute = comparison.attribute()
+        elif isinstance(comparison.attribute, str):
+            attribute = comparison.attribute
+        else:
+            raise TypeError(
+                f"Unknown type {type(comparison.attribute)} for `comparison.attribute`!"
+            )
+
+        return {attribute: {self._format_func(comparison.comparator): comparison.value}}
 
     def visit_structured_query(
         self, structured_query: StructuredQuery

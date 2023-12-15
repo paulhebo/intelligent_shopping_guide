@@ -25,7 +25,7 @@ try:
         StrictInt,
     )
 except ImportError:
-    from pydantic import (
+    from pydantic import (  # type: ignore[assignment]
         BaseModel,
         Field,
         PrivateAttr,
@@ -114,16 +114,25 @@ class Dataset(DatasetBase):
     session_count: Optional[int] = None
     last_session_start_time: Optional[datetime] = None
     _host_url: Optional[str] = PrivateAttr(default=None)
+    _tenant_id: Optional[UUID] = PrivateAttr(default=None)
 
-    def __init__(self, _host_url: Optional[str] = None, **kwargs: Any) -> None:
-        """Initialize a Run object."""
+    def __init__(
+        self,
+        _host_url: Optional[str] = None,
+        _tenant_id: Optional[UUID] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize a Dataset object."""
         super().__init__(**kwargs)
         self._host_url = _host_url
+        self._tenant_id = _tenant_id
 
     @property
     def url(self) -> Optional[str]:
         """URL of this run within the app."""
         if self._host_url:
+            if self._tenant_id:
+                return f"{self._host_url}/o/{str(self._tenant_id)}/datasets/{self.id}"
             return f"{self._host_url}/datasets/{self.id}"
         return None
 
@@ -194,8 +203,6 @@ class RunBase(BaseModel):
 class Run(RunBase):
     """Run schema when loading from the DB."""
 
-    execution_order: int
-    """The execution order of the run within a run trace."""
     session_id: Optional[UUID] = None
     """The project ID this run belongs to."""
     child_run_ids: Optional[List[UUID]] = None
@@ -235,6 +242,8 @@ class Run(RunBase):
         - 20230914T223155647Z1b64098b-4ab7-43f6-afee-992304f198d8.20230914T223155649Z809ed3a2-0172-4f4d-8a02-a64e9b7a0f8a
         - 20230915T223155647Z1b64098b-4ab7-43f6-afee-992304f198d8.20230914T223155650Zc8d9f4c5-6c5a-4b2d-9b1c-3d9d7a7c5c7c
     """  # noqa: E501
+    execution_order: Optional[int] = None
+    """The execution order of the run within a run trace."""
     _host_url: Optional[str] = PrivateAttr(default=None)
 
     def __init__(self, _host_url: Optional[str] = None, **kwargs: Any) -> None:
@@ -399,3 +408,6 @@ class DatasetShareSchema(TypedDict, total=False):
     dataset_id: UUID
     share_token: UUID
     url: str
+
+
+Example.update_forward_refs()

@@ -6,7 +6,6 @@ import contextvars
 import functools
 import inspect
 import logging
-import os
 import traceback
 import uuid
 from concurrent import futures
@@ -129,9 +128,7 @@ def _setup_run(
     args: Any = None,
     kwargs: Any = None,
 ) -> _TraceableContainer:
-    outer_project = _PROJECT_NAME.get() or os.environ.get(
-        "LANGCHAIN_PROJECT", os.environ.get("LANGCHAIN_PROJECT", "default")
-    )
+    outer_project = _PROJECT_NAME.get() or utils.get_tracer_project()
     langsmith_extra = langsmith_extra or LangSmithExtra()
     parent_run_ = langsmith_extra.get("run_tree") or _PARENT_RUN_TREE.get()
     if not parent_run_ and not utils.tracing_is_enabled():
@@ -161,7 +158,11 @@ def _setup_run(
     metadata_.update(metadata or {})
     metadata_["ls_method"] = "traceable"
     extra_inner["metadata"] = metadata_
-    inputs = _get_inputs(signature, *args, **kwargs)
+    try:
+        inputs = _get_inputs(signature, *args, **kwargs)
+    except TypeError as e:
+        logger.debug(f"Failed to infer inputs for {name_}: {e}")
+        inputs = {"args": args, "kwargs": kwargs}
     outer_tags = _TAGS.get()
     tags_ = (langsmith_extra.get("tags") or []) + (outer_tags or [])
     _TAGS.set(tags_)
@@ -484,9 +485,7 @@ def trace(
     """Context manager for creating a run tree."""
     outer_tags = _TAGS.get()
     outer_metadata = _METADATA.get()
-    outer_project = _PROJECT_NAME.get() or os.environ.get(
-        "LANGCHAIN_PROJECT", os.environ.get("LANGCHAIN_PROJECT", "default")
-    )
+    outer_project = _PROJECT_NAME.get() or utils.get_tracer_project()
     parent_run_ = _PARENT_RUN_TREE.get() if run_tree is None else run_tree
 
     # Merge and set context varaibles

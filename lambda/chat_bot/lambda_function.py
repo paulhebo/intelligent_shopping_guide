@@ -42,7 +42,7 @@ def lambda_handler(event, context):
         sessionId = str(evt_body['sessionId'])
     print('sessionId:',sessionId)
     
-    modelType = 'normal'
+    modelType = 'bedrock'
     if "modelType" in evt_body.keys():
         modelType = evt_body['modelType']
   

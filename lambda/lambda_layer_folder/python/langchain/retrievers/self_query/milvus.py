@@ -9,6 +9,7 @@ from langchain.chains.query_constructor.ir import (
     StructuredQuery,
     Visitor,
 )
+from langchain.chains.query_constructor.schema import VirtualColumnName
 
 COMPARATOR_TO_BER = {
     Comparator.EQ: "==",
@@ -77,9 +78,17 @@ class MilvusTranslator(Visitor):
             return "(" + (" " + operator + " ").join(args) + ")"
 
     def visit_comparison(self, comparison: Comparison) -> str:
+        if isinstance(comparison.attribute, VirtualColumnName):
+            attribute = comparison.attribute()
+        elif isinstance(comparison.attribute, str):
+            attribute = comparison.attribute
+        else:
+            raise TypeError(
+                f"Unknown type {type(comparison.attribute)} for `comparison.attribute`!"
+            )
+
         comparator = self._format_func(comparison.comparator)
         processed_value = process_value(comparison.value)
-        attribute = comparison.attribute
 
         return "( " + attribute + " " + comparator + " " + processed_value + " )"
 

@@ -8,6 +8,7 @@ from langchain.chains.query_constructor.ir import (
     StructuredQuery,
     Visitor,
 )
+from langchain.chains.query_constructor.schema import VirtualColumnName
 
 
 class ElasticsearchTranslator(Visitor):
@@ -49,9 +50,18 @@ class ElasticsearchTranslator(Visitor):
         return {"bool": {self._format_func(operation.operator): args}}
 
     def visit_comparison(self, comparison: Comparison) -> Dict:
+        if isinstance(comparison.attribute, VirtualColumnName):
+            attribute = comparison.attribute()
+        elif isinstance(comparison.attribute, str):
+            attribute = comparison.attribute
+        else:
+            raise TypeError(
+                f"Unknown type {type(comparison.attribute)} for `comparison.attribute`!"
+            )
+
         # ElasticsearchStore filters require to target
         # the metadata object field
-        field = f"metadata.{comparison.attribute}"
+        field = f"metadata.{attribute}"
 
         is_range_comparator = comparison.comparator in [
             Comparator.GT,

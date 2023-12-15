@@ -1646,6 +1646,8 @@ class TestSpecialFloats:
                           np.array(1200.0, dtype='d'))
 
     @pytest.mark.skipif(IS_WASM, reason="fp errors don't work in wasm")
+    @pytest.mark.skipif('bsd' in sys.platform,
+            reason="fallback implementation may not raise, see gh-2487")
     def test_cosh(self):
         in_ = [np.nan, -np.nan, np.inf, -np.inf]
         out = [np.nan, np.nan, np.inf, np.inf]
@@ -1710,6 +1712,9 @@ class TestSpecialFloats:
                     assert_raises(FloatingPointError, np.arctanh,
                                   np.array(value, dtype=dt))
 
+        # Make sure glibc < 2.18 atanh is not used, issue 25087
+        assert np.signbit(np.arctanh(-1j).real)
+
     # See: https://github.com/numpy/numpy/issues/20448
     @pytest.mark.xfail(
         _glibc_older_than("2.17"),
@@ -1764,6 +1769,8 @@ class TestSpecialFloats:
         np.log, np.log2, np.log10, np.reciprocal, np.arccosh
     ]
 
+    @pytest.mark.skipif(sys.platform == "win32" and sys.maxsize < 2**31 + 1,
+                        reason='failures on 32-bit Python, see FIXME below')
     @pytest.mark.parametrize("ufunc", UFUNCS_UNARY_FP)
     @pytest.mark.parametrize("dtype", ('e', 'f', 'd'))
     @pytest.mark.parametrize("data, escape", (
@@ -1810,6 +1817,8 @@ class TestSpecialFloats:
         # FIXME: NAN raises FP invalid exception:
         #  - ceil/float16 on MSVC:32-bit
         #  - spacing/float16 on almost all platforms
+        # FIXME: skipped on MSVC:32-bit during switch to Meson, 10 cases fail
+        #        when SIMD support not present / disabled
         if ufunc in (np.spacing, np.ceil) and dtype == 'e':
             return
         array = np.array(data, dtype=dtype)
@@ -3916,6 +3925,19 @@ class TestSpecialMethods:
         assert_equal(a, check)
         assert_(a.info, {'inputs': [0, 2]})
 
+    def test_array_ufunc_direct_call(self):
+        # This is mainly a regression test for gh-24023 (shouldn't segfault)
+        a = np.array(1)
+        with pytest.raises(TypeError):
+            a.__array_ufunc__()
+
+        # No kwargs means kwargs may be NULL on the C-level
+        with pytest.raises(TypeError):
+            a.__array_ufunc__(1, 2)
+
+        # And the same with a valid call:
+        res = a.__array_ufunc__(np.add, "__call__", a, a)
+        assert_array_equal(res, a + a)
 
 class TestChoose:
     def test_mixed(self):
@@ -4160,6 +4182,11 @@ class TestComplexFunctions:
                 b = cfunc(p)
                 assert_(abs(a - b) < atol, "%s %s: %s; cmath: %s" % (fname, p, a, b))
 
+    @pytest.mark.xfail(
+        # manylinux2014 uses glibc2.17
+        _glibc_older_than("2.18"),
+        reason="Older glibc versions are imprecise (maybe passes with SIMD?)"
+    )
     @pytest.mark.xfail(IS_MUSL, reason="gh23049")
     @pytest.mark.xfail(IS_WASM, reason="doesn't work")
     @pytest.mark.parametrize('dtype', [np.complex64, np.complex_, np.longcomplex])

@@ -67,8 +67,6 @@ def _get_builtin_translator(vectorstore: VectorStore) -> Visitor:
     }
     if isinstance(vectorstore, Qdrant):
         return QdrantTranslator(metadata_key=vectorstore.metadata_payload_key)
-    elif isinstance(vectorstore, MyScale):
-        return MyScaleTranslator(metadata_key=vectorstore.metadata_column)
     elif isinstance(vectorstore, Redis):
         return RedisTranslator.from_vectorstore(vectorstore)
     elif vectorstore.__class__ in BUILTIN_TRANSLATORS:
@@ -147,7 +145,7 @@ class SelfQueryRetriever(BaseRetriever, BaseModel):
         return docs
 
     def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+        self, query: str, k: int = 4, *, run_manager: CallbackManagerForRetrieverRun
     ) -> List[Document]:
         """Get documents relevant for a query.
 
@@ -160,9 +158,12 @@ class SelfQueryRetriever(BaseRetriever, BaseModel):
         structured_query = self.query_constructor.invoke(
             {"query": query}, config={"callbacks": run_manager.get_child()}
         )
+        print('structured_query:',structured_query)
         if self.verbose:
             logger.info(f"Generated Query: {structured_query}")
         new_query, search_kwargs = self._prepare_query(query, structured_query)
+        search_kwargs["k"] = k
+        print('search_kwargs:',search_kwargs)
         docs = self._get_docs_with_query(new_query, search_kwargs)
         return docs
 

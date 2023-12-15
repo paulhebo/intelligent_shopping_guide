@@ -3,7 +3,6 @@ import shutil
 from langchain.prompts.prompt import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import LLMChain
-from langchain.llms import AmazonAPIGatewayBedrock
 from langchain.llms import AmazonAPIGateway
 import json
 
@@ -44,7 +43,7 @@ class ShoppingGuideChatBot:
         if model_type == "llama2":
             self.llm = init_model_llama2(llm_endpoint_name,region,temperature)
         elif model_type == "bedrock_api":
-            self.llm = AmazonAPIGatewayBedrock(api_url=bedrock_api_url)
+            self.llm = AmazonAPIGateway(api_url=bedrock_api_url)
             parameters={
                 "modelId":bedrock_model_id,
                 "max_tokens":bedrock_max_tokens,
@@ -54,8 +53,7 @@ class ShoppingGuideChatBot:
         elif model_type == "bedrock":
             self.llm = init_model_bedrock(model_name)
             parameters={
-                "modelId":model_name,
-                "max_tokens":max_tokens,
+                "max_tokens_to_sample":max_tokens,
                 "temperature":temperature
             }
             self.llm.model_kwargs = parameters
@@ -69,8 +67,7 @@ class ShoppingGuideChatBot:
                 }
                 self.llm.model_kwargs = parameters
             elif model_name.find('chatglm') >= 0:
-                api_url = ''
-                self.llm = AmazonAPIGateway(api_url=api_url)
+                self.llm = AmazonAPIGateway(api_url='')
                 parameters={
                     "modelId":model_name,
                     "api_key":api_key,
@@ -78,6 +75,9 @@ class ShoppingGuideChatBot:
                 self.llm.model_kwargs = parameters
         else:
             self.llm = init_model(llm_endpoint_name,region,temperature)
+    
+    def get_llm(self):
+        return self.llm
             
     def get_chat(self,query,
                       prompt_template: str='',

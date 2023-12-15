@@ -57,6 +57,16 @@ class ContentHandlerAmazonAPIGateway:
     @classmethod
     def transform_output_chatglm(cls, response: Any) -> str:
         return response['data']['choices'][0]['content'][1:-1].strip()
+        
+    @classmethod
+    def transform_input_bedrock(
+        cls, prompt: str, model_kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        return {"prompt": prompt, "parameters": model_kwargs}
+
+    @classmethod
+    def transform_output_bedrock(cls, response: Any) -> str:
+        return json.loads(response.text)['answer']
     
 
 class AmazonAPIGateway(LLM):
@@ -121,7 +131,28 @@ class AmazonAPIGateway(LLM):
         modelId = ''
         if 'modelId' in _model_kwargs.keys():
             modelId = _model_kwargs['modelId']
-        if modelId.find('Baichuan') >= 0:
+        
+        if modelId.find('anthropic') >= 0 or modelId.find('meta') >= 0:    
+            payload = self.content_handler.transform_input_bedrock(prompt, _model_kwargs)
+            try:
+                prompt = payload['prompt']
+                print('******')
+                print('bedrock prompt:',prompt)
+                print('*******')
+                url = self.api_url + ('prompt='+prompt)
+                parameters = payload['parameters']
+                print('parameters:',parameters)
+                for key in parameters.keys():
+                    url += ('&'+key+'='+str(parameters[key]))
+                    
+                print('url:',url)
+                response = requests.get(url)
+                text = self.content_handler.transform_output(response)
+    
+            except Exception as error:
+                raise ValueError(f"Error raised by the service: {error}")            
+            
+        elif modelId.find('Baichuan') >= 0:
             payload = self.content_handler.transform_input_baichuan(prompt, _model_kwargs)
             api_key = _model_kwargs['api_key']
             secret_key = _model_kwargs['secret_key']
@@ -150,6 +181,9 @@ class AmazonAPIGateway(LLM):
         elif modelId.find('chatglm') >= 0:
             api_key = _model_kwargs['api_key']
             zhipuai.api_key = api_key
+            
+            print('prompt:',prompt)
+            
             try:
                 response = zhipuai.model_api.invoke(
                     model=modelId,
@@ -158,6 +192,8 @@ class AmazonAPIGateway(LLM):
                     ]
                 )
                 text = self.content_handler.transform_output_chatglm(response)
+                text = eval('"'+text+'"')
+                print('text:',text)
                 
             except Exception as error:
                 raise ValueError(f"Error raised by the service: {error}")

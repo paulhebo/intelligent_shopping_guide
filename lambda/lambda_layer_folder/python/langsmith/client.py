@@ -46,6 +46,8 @@ if TYPE_CHECKING:
     import pandas as pd
 
 logger = logging.getLogger(__name__)
+# Filter the Connection pool is full warnings from urllib3
+logging.getLogger("urllib3.connectionpool").addFilter(ls_utils.FilterPoolFullWarning())
 
 
 def _is_localhost(url: str) -> bool:
@@ -124,26 +126,24 @@ def _default_retry_config() -> Retry:
     return Retry(**retry_params)  # type: ignore
 
 
-def _serialize_json(obj: Any) -> str:
-    """Serialize an object to JSON.
-
-    Parameters
-    ----------
-    obj : Any
-        The object to serialize.
-
-    Returns
-    -------
-    str
-        The serialized JSON string.
-
-    Raises
-    ------
-    TypeError
-        If the object type is not serializable.
-    """
+def _serialize_json(obj: Any) -> Union[str, dict]:
     if isinstance(obj, datetime.datetime):
         return obj.isoformat()
+
+    elif hasattr(obj, "model_dump_json") and callable(obj.model_dump_json):
+        # Base models, V2
+        try:
+            return json.loads(obj.model_dump_json(exclude_none=True))
+        except Exception:
+            logger.debug(f"Failed to serialize obj of type {type(obj)} to JSON")
+            return str(obj)
+    elif hasattr(obj, "json") and callable(obj.json):
+        # Base models, V1
+        try:
+            return json.loads(obj.json(exclude_none=True))
+        except Exception:
+            logger.debug(f"Failed to json serialize {type(obj)} to JSON")
+            return repr(obj)
     else:
         return str(obj)
 
@@ -214,6 +214,10 @@ def _hide_outputs(outputs: Dict[str, Any]) -> Dict[str, Any]:
     if os.environ.get("LANGCHAIN_HIDE_OUTPUTS") == "true":
         return {}
     return outputs
+
+
+def _as_uuid(value: ID_TYPE) -> uuid.UUID:
+    return uuid.UUID(value) if not isinstance(value, uuid.UUID) else value
 
 
 class Client:
@@ -640,11 +644,8 @@ class Client:
             "project_name",
             kwargs.pop(
                 "session_name",
-                os.environ.get(
-                    # TODO: Deprecate LANGCHAIN_SESSION
-                    "LANGCHAIN_PROJECT",
-                    os.environ.get("LANGCHAIN_SESSION", "default"),
-                ),
+                # if the project is not provided, use the environment's project
+                ls_utils.get_tracer_project(),
             ),
         )
         run_create = {
@@ -724,7 +725,7 @@ class Client:
             data["events"] = events
         self.request_with_retries(
             "patch",
-            f"{self.api_url}/runs/{run_id}",
+            f"{self.api_url}/runs/{_as_uuid(run_id)}",
             request_kwargs={
                 "data": json.dumps(data, default=_serialize_json),
                 "headers": headers,
@@ -786,7 +787,7 @@ class Client:
         Run
             The run.
         """
-        response = self._get_with_retries(f"/runs/{run_id}")
+        response = self._get_with_retries(f"/runs/{_as_uuid(run_id)}")
         run = ls_schemas.Run(**response.json(), _host_url=self._host_url)
         if load_child_runs and run.child_run_ids:
             run = self._load_child_runs(run)
@@ -904,24 +905,22 @@ class Client:
         elif project_name is not None:
             session_id = self.read_project(project_name=project_name).id
         else:
-            project_name = os.environ.get(
-                "LANGCHAIN_PROJECT",
-                "default",
-            )
+            project_name = ls_utils.get_tracer_project()
             session_id = self.read_project(project_name=project_name).id
         return (
-            f"{self._host_url}/o/{self._get_tenant_id()}/projects/p/{session_id}/"
+            f"{self._host_url}/o/{self._get_tenant_id()}/projects/p/{_as_uuid(session_id)}/"
             f"r/{run.id}?poll=true"
         )
 
     def share_run(self, run_id: ID_TYPE, *, share_id: Optional[ID_TYPE] = None) -> str:
         """Get a share link for a run."""
+        run_id_ = _as_uuid(run_id)
         data = {
-            "run_id": str(run_id),
+            "run_id": str(run_id_),
             "share_token": share_id or str(uuid.uuid4()),
         }
         response = self.session.put(
-            f"{self.api_url}/runs/{run_id}/share",
+            f"{self.api_url}/runs/{run_id_}/share",
             headers=self._headers,
             json=data,
         )
@@ -932,14 +931,14 @@ class Client:
     def unshare_run(self, run_id: ID_TYPE) -> None:
         """Delete share link for a run."""
         response = self.session.delete(
-            f"{self.api_url}/runs/{run_id}/share",
+            f"{self.api_url}/runs/{_as_uuid(run_id)}/share",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
 
     def read_run_shared_link(self, run_id: ID_TYPE) -> Optional[str]:
         response = self.session.get(
-            f"{self.api_url}/runs/{run_id}/share",
+            f"{self.api_url}/runs/{_as_uuid(run_id)}/share",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
@@ -950,16 +949,16 @@ class Client:
 
     def run_is_shared(self, run_id: ID_TYPE) -> bool:
         """Get share state for a run."""
-        link = self.read_run_shared_link(run_id)
+        link = self.read_run_shared_link(_as_uuid(run_id))
         return link is not None
 
     def list_shared_runs(
-        self, share_token: str, run_ids: Optional[List[str]] = None
+        self, share_token: ID_TYPE, run_ids: Optional[List[str]] = None
     ) -> List[ls_schemas.Run]:
         """Get shared runs."""
-        params = {"id": run_ids, "share_token": share_token}
+        params = {"id": run_ids, "share_token": str(share_token)}
         response = self.session.get(
-            f"{self.api_url}/public/{share_token}/runs",
+            f"{self.api_url}/public/{_as_uuid(share_token)}/runs",
             headers=self._headers,
             params=params,
         )
@@ -979,14 +978,14 @@ class Client:
         if dataset_id is None:
             dataset_id = self.read_dataset(dataset_name=dataset_name).id
         response = self.session.get(
-            f"{self.api_url}/datasets/{dataset_id}/share",
+            f"{self.api_url}/datasets/{_as_uuid(dataset_id)}/share",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
         d = response.json()
         return cast(
             ls_schemas.DatasetShareSchema,
-            {**d, "url": f"{self._host_url}/public/{d['share_token']}/d"},
+            {**d, "url": f"{self._host_url}/public/{_as_uuid(d['share_token'])}/d"},
         )
 
     def share_dataset(
@@ -1004,7 +1003,7 @@ class Client:
             "dataset_id": str(dataset_id),
         }
         response = self.session.put(
-            f"{self.api_url}/datasets/{dataset_id}/share",
+            f"{self.api_url}/datasets/{_as_uuid(dataset_id)}/share",
             headers=self._headers,
             json=data,
         )
@@ -1018,7 +1017,7 @@ class Client:
     def unshare_dataset(self, dataset_id: ID_TYPE) -> None:
         """Delete share link for a dataset."""
         response = self.session.delete(
-            f"{self.api_url}/datasets/{dataset_id}/share",
+            f"{self.api_url}/datasets/{_as_uuid(dataset_id)}/share",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
@@ -1029,7 +1028,7 @@ class Client:
     ) -> ls_schemas.Dataset:
         """Get shared datasets."""
         response = self.session.get(
-            f"{self.api_url}/public/{share_token}/datasets",
+            f"{self.api_url}/public/{_as_uuid(share_token)}/datasets",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
@@ -1043,7 +1042,7 @@ class Client:
         if example_ids is not None:
             params["id"] = [str(id) for id in example_ids]
         response = self.session.get(
-            f"{self.api_url}/public/{share_token}/examples",
+            f"{self.api_url}/public/{_as_uuid(share_token)}/examples",
             headers=self._headers,
             params=params,
         )
@@ -1056,16 +1055,16 @@ class Client:
     def list_shared_projects(
         self,
         *,
-        dataset_share_token: Optional[str] = None,
+        dataset_share_token: str,
         project_ids: Optional[List[ID_TYPE]] = None,
         name: Optional[str] = None,
         name_contains: Optional[str] = None,
-    ) -> Iterator[ls_schemas.TracerSession]:
+    ) -> Iterator[ls_schemas.TracerSessionResult]:
         params = {"id": project_ids, "name": name, "name_contains": name_contains}
         yield from [
-            ls_schemas.TracerSession(**dataset, _host_url=self._host_url)
-            for dataset in self._get_paginated_list(
-                f"/public/{dataset_share_token}/datasets/sessions",
+            ls_schemas.TracerSessionResult(**project, _host_url=self._host_url)
+            for project in self._get_paginated_list(
+                f"/public/{_as_uuid(dataset_share_token)}/datasets/sessions",
                 params=params,
             )
         ]
@@ -1074,8 +1073,10 @@ class Client:
         self,
         project_name: str,
         *,
-        project_extra: Optional[dict] = None,
+        description: Optional[str] = None,
+        metadata: Optional[dict] = None,
         upsert: bool = False,
+        project_extra: Optional[dict] = None,
         reference_dataset_id: Optional[ID_TYPE] = None,
     ) -> ls_schemas.TracerSession:
         """Create a project on the LangSmith API.
@@ -1086,6 +1087,10 @@ class Client:
             The name of the project.
         project_extra : dict or None, default=None
             Additional project information.
+        metadata: dict or None, default=None
+            Additional metadata to associate with the project.
+        description : str or None, default=None
+            The description of the project.
         upsert : bool, default=False
             Whether to update the project if it already exists.
         reference_dataset_id: UUID or None, default=None
@@ -1097,9 +1102,13 @@ class Client:
             The created project.
         """
         endpoint = f"{self.api_url}/sessions"
+        extra = project_extra
+        if metadata:
+            extra = {**(extra or {}), "metadata": metadata}
         body: Dict[str, Any] = {
             "name": project_name,
-            "extra": project_extra,
+            "extra": extra,
+            "description": description,
         }
         params = {}
         if upsert:
@@ -1107,6 +1116,55 @@ class Client:
         if reference_dataset_id is not None:
             body["reference_dataset_id"] = reference_dataset_id
         response = self.session.post(
+            endpoint,
+            headers={**self._headers, "Content-Type": "application/json"},
+            data=json.dumps(body, default=_serialize_json),
+        )
+        ls_utils.raise_for_status_with_text(response)
+        return ls_schemas.TracerSession(**response.json(), _host_url=self._host_url)
+
+    def update_project(
+        self,
+        project_id: ID_TYPE,
+        *,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        metadata: Optional[dict] = None,
+        project_extra: Optional[dict] = None,
+        end_time: Optional[datetime.datetime] = None,
+    ) -> ls_schemas.TracerSession:
+        """Update a LangSmith project.
+
+        Parameters
+        ----------
+        project_id : UUID
+            The ID of the project to update.
+        name : str or None, default=None
+            The new name to give the project. This is only valid if the project
+            has been assigned an end_time, meaning it has been completed/closed.
+        description : str or None, default=None
+            The new description to give the project.
+        metadata: dict or None, default=None
+
+        project_extra : dict or None, default=None
+            Additional project information.
+
+        Returns
+        -------
+        TracerSession
+            The updated project.
+        """
+        endpoint = f"{self.api_url}/sessions/{_as_uuid(project_id)}"
+        extra = project_extra
+        if metadata:
+            extra = {**(extra or {}), "metadata": metadata}
+        body: Dict[str, Any] = {
+            "name": name,
+            "extra": extra,
+            "description": description,
+            "end_time": end_time.isoformat() if end_time else None,
+        }
+        response = self.session.patch(
             endpoint,
             headers={**self._headers, "Content-Type": "application/json"},
             data=json.dumps(body, default=_serialize_json),
@@ -1149,7 +1207,7 @@ class Client:
         path = "/sessions"
         params: Dict[str, Any] = {"limit": 1}
         if project_id is not None:
-            path += f"/{project_id}"
+            path += f"/{_as_uuid(project_id)}"
         elif project_name is not None:
             params["name"] = project_name
         else:
@@ -1158,11 +1216,79 @@ class Client:
         result = response.json()
         if isinstance(result, list):
             if len(result) == 0:
-                raise ls_utils.LangSmithError(f"Project {project_name} not found")
+                raise ls_utils.LangSmithNotFoundError(
+                    f"Project {project_name} not found"
+                )
             return ls_schemas.TracerSessionResult(**result[0], _host_url=self._host_url)
         return ls_schemas.TracerSessionResult(
             **response.json(), _host_url=self._host_url
         )
+
+    def get_test_results(
+        self,
+        *,
+        project_id: Optional[ID_TYPE] = None,
+        project_name: Optional[str] = None,
+    ) -> "pd.DataFrame":
+        """Read the record-level information from a test project into a Pandas DF.
+
+        Note: this will fetch whatever data exists in the DB. Results are not
+        immediately available in the DB upon evaluation run completion.
+
+        Returns
+        -------
+        pd.DataFrame
+            A dataframe containing the test results.
+        """
+        import pandas as pd  # type: ignore
+
+        runs = self.list_runs(
+            project_id=project_id, project_name=project_name, execution_order=1
+        )
+        results = []
+        example_ids = []
+        for r in runs:
+            row = {
+                "example_id": r.reference_example_id,
+                **{f"input.{k}": v for k, v in r.inputs.items()},
+                **{f"outputs.{k}": v for k, v in (r.outputs or {}).items()},
+            }
+            if r.feedback_stats:
+                for k, v in r.feedback_stats.items():
+                    row[f"feedback.{k}"] = v.get("avg")
+            row.update(
+                {
+                    "execution_time": (r.end_time - r.start_time).total_seconds()
+                    if r.end_time
+                    else None,
+                    "error": r.error,
+                    "id": r.id,
+                }
+            )
+            if r.reference_example_id:
+                example_ids.append(r.reference_example_id)
+            results.append(row)
+        result = pd.DataFrame(results).set_index("example_id")
+        batch_size = 100
+        example_outputs = []
+        for batch in [
+            example_ids[i : i + batch_size]
+            for i in range(0, len(example_ids), batch_size)
+        ]:
+            for example in self.list_examples(example_ids=batch):
+                example_outputs.append(
+                    {
+                        "example_id": example.id,
+                        **{
+                            f"reference.{k}": v
+                            for k, v in (example.outputs or {}).items()
+                        },
+                    }
+                )
+        if example_outputs:
+            df = pd.DataFrame(example_outputs).set_index("example_id")
+            return df.merge(result, left_index=True, right_index=True)
+        return result
 
     def list_projects(
         self,
@@ -1218,7 +1344,7 @@ class Client:
         if reference_free is not None:
             params["reference_free"] = reference_free
         yield from (
-            ls_schemas.TracerSession(**project, _host_url=self._host_url)
+            ls_schemas.TracerSessionResult(**project, _host_url=self._host_url)
             for project in self._get_paginated_list("/sessions", params=params)
         )
 
@@ -1240,7 +1366,7 @@ class Client:
         elif project_id is None:
             raise ValueError("Must provide project_name or project_id")
         response = self.session.delete(
-            self.api_url + f"/sessions/{project_id}",
+            self.api_url + f"/sessions/{_as_uuid(project_id)}",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
@@ -1279,7 +1405,34 @@ class Client:
             data=dataset.json(),
         )
         ls_utils.raise_for_status_with_text(response)
-        return ls_schemas.Dataset(**response.json(), _host_url=self._host_url)
+        return ls_schemas.Dataset(
+            **response.json(),
+            _host_url=self._host_url,
+            _tenant_id=self._get_tenant_id(),
+        )
+
+    def has_dataset(
+        self, *, dataset_name: Optional[str] = None, dataset_id: Optional[str] = None
+    ) -> bool:
+        """Check whether a dataset exists in your tenant.
+
+        Parameters
+        ----------
+        dataset_name : str or None, default=None
+            The name of the dataset to check.
+        dataset_id : str or None, default=None
+            The ID of the dataset to check.
+
+        Returns
+        -------
+        bool
+            Whether the dataset exists.
+        """
+        try:
+            self.read_dataset(dataset_name=dataset_name, dataset_id=dataset_id)
+            return True
+        except ls_utils.LangSmithNotFoundError:
+            return False
 
     @ls_utils.xor_args(("dataset_name", "dataset_id"))
     def read_dataset(
@@ -1305,7 +1458,7 @@ class Client:
         path = "/datasets"
         params: Dict[str, Any] = {"limit": 1}
         if dataset_id is not None:
-            path += f"/{dataset_id}"
+            path += f"/{_as_uuid(dataset_id)}"
         elif dataset_name is not None:
             params["name"] = dataset_name
         else:
@@ -1317,9 +1470,15 @@ class Client:
         result = response.json()
         if isinstance(result, list):
             if len(result) == 0:
-                raise ls_utils.LangSmithError(f"Dataset {dataset_name} not found")
-            return ls_schemas.Dataset(**result[0], _host_url=self._host_url)
-        return ls_schemas.Dataset(**result, _host_url=self._host_url)
+                raise ls_utils.LangSmithNotFoundError(
+                    f"Dataset {dataset_name} not found"
+                )
+            return ls_schemas.Dataset(
+                **result[0], _host_url=self._host_url, _tenant_id=self._get_tenant_id()
+            )
+        return ls_schemas.Dataset(
+            **result, _host_url=self._host_url, _tenant_id=self._get_tenant_id()
+        )
 
     def read_dataset_openai_finetuning(
         self, dataset_id: Optional[str] = None, *, dataset_name: Optional[str] = None
@@ -1347,7 +1506,7 @@ class Client:
         else:
             raise ValueError("Must provide dataset_name or dataset_id")
         response = self._get_with_retries(
-            f"{path}/{dataset_id}/openai_ft",
+            f"{path}/{_as_uuid(dataset_id)}/openai_ft",
         )
         dataset = [json.loads(line) for line in response.text.strip().split("\n")]
         return dataset
@@ -1403,7 +1562,7 @@ class Client:
         if dataset_id is None:
             raise ValueError("Must provide either dataset name or ID")
         response = self.session.delete(
-            f"{self.api_url}/datasets/{dataset_id}",
+            f"{self.api_url}/datasets/{_as_uuid(dataset_id)}",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
@@ -1672,14 +1831,15 @@ class Client:
         Example
             The example.
         """
-        response = self._get_with_retries(f"/examples/{example_id}")
+        response = self._get_with_retries(f"/examples/{_as_uuid(example_id)}")
         return ls_schemas.Example(**response.json())
 
     def list_examples(
         self,
         dataset_id: Optional[ID_TYPE] = None,
         dataset_name: Optional[str] = None,
-        example_ids: Optional[List[ID_TYPE]] = None,
+        example_ids: Optional[Sequence[ID_TYPE]] = None,
+        inline_s3_urls: bool = True,
     ) -> Iterator[ls_schemas.Example]:
         """Retrieve the example rows of the specified dataset.
 
@@ -1707,6 +1867,7 @@ class Client:
             pass
         if example_ids is not None:
             params["id"] = example_ids
+        params["inline_s3_urls"] = inline_s3_urls
         yield from (
             ls_schemas.Example(**example)
             for example in self._get_paginated_list("/examples", params=params)
@@ -1744,7 +1905,7 @@ class Client:
             dataset_id=dataset_id,
         )
         response = self.session.patch(
-            f"{self.api_url}/examples/{example_id}",
+            f"{self.api_url}/examples/{_as_uuid(example_id)}",
             headers={**self._headers, "Content-Type": "application/json"},
             data=example.json(exclude_none=True),
         )
@@ -1760,7 +1921,7 @@ class Client:
             The ID of the example to delete.
         """
         response = self.session.delete(
-            f"{self.api_url}/examples/{example_id}",
+            f"{self.api_url}/examples/{_as_uuid(example_id)}",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
@@ -1826,6 +1987,21 @@ class Client:
             reference_example_ = None
         return reference_example_
 
+    def _select_eval_results(
+        self,
+        results: Union[ls_evaluator.EvaluationResult, ls_evaluator.EvaluationResults],
+    ) -> List[ls_evaluator.EvaluationResult]:
+        if isinstance(results, ls_evaluator.EvaluationResult):
+            results_ = [results]
+        elif isinstance(results, dict) and "results" in results:
+            results_ = cast(List[ls_evaluator.EvaluationResult], results["results"])
+        else:
+            raise TypeError(
+                f"Invalid evaluation result type {type(results)}."
+                " Expected EvaluationResult or EvaluationResults."
+            )
+        return results_
+
     def evaluate_run(
         self,
         run: Union[ls_schemas.Run, ls_schemas.RunBase, str, uuid.UUID],
@@ -1861,25 +2037,44 @@ class Client:
         """
         run_ = self._resolve_run_id(run, load_child_runs=load_child_runs)
         reference_example_ = self._resolve_example_id(reference_example, run_)
-        evaluation_result = evaluator.evaluate_run(
+        evaluator_response = evaluator.evaluate_run(
             run_,
             example=reference_example_,
         )
-        source_info = source_info or {}
-        if evaluation_result.evaluator_info:
-            source_info = {**evaluation_result.evaluator_info, **source_info}
-        self.create_feedback(
-            run_.id,
-            evaluation_result.key,
-            score=evaluation_result.score,
-            value=evaluation_result.value,
-            comment=evaluation_result.comment,
-            correction=evaluation_result.correction,
+        results = self._log_evaluation_feedback(
+            evaluator_response,
+            run_,
             source_info=source_info,
-            source_run_id=evaluation_result.source_run_id,
-            feedback_source_type=ls_schemas.FeedbackSourceType.MODEL,
         )
-        return evaluation_result
+        # TODO: Return all results
+        return results[0]
+
+    def _log_evaluation_feedback(
+        self,
+        evaluator_response: Union[
+            ls_evaluator.EvaluationResult, ls_evaluator.EvaluationResults
+        ],
+        run: ls_schemas.Run,
+        source_info: Optional[Dict[str, Any]] = None,
+    ) -> List[ls_evaluator.EvaluationResult]:
+        results = self._select_eval_results(evaluator_response)
+        for res in results:
+            source_info_ = source_info or {}
+            if res.evaluator_info:
+                source_info_ = {**res.evaluator_info, **source_info_}
+            run_id_ = res.target_run_id if res.target_run_id else run.id
+            self.create_feedback(
+                run_id_,
+                res.key,
+                score=res.score,
+                value=res.value,
+                comment=res.comment,
+                correction=res.correction,
+                source_info=source_info_,
+                source_run_id=res.source_run_id,
+                feedback_source_type=ls_schemas.FeedbackSourceType.MODEL,
+            )
+        return results
 
     async def aevaluate_run(
         self,
@@ -1916,25 +2111,17 @@ class Client:
         """
         run_ = self._resolve_run_id(run, load_child_runs=load_child_runs)
         reference_example_ = self._resolve_example_id(reference_example, run_)
-        evaluation_result = await evaluator.aevaluate_run(
+        evaluator_response = await evaluator.aevaluate_run(
             run_,
             example=reference_example_,
         )
-        source_info = source_info or {}
-        if evaluation_result.evaluator_info:
-            source_info = {**evaluation_result.evaluator_info, **source_info}
-        self.create_feedback(
-            run_.id,
-            evaluation_result.key,
-            score=evaluation_result.score,
-            value=evaluation_result.value,
-            comment=evaluation_result.comment,
-            correction=evaluation_result.correction,
+        # TODO: Return all results and use async API
+        results = self._log_evaluation_feedback(
+            evaluator_response,
+            run_,
             source_info=source_info,
-            source_run_id=evaluation_result.source_run_id,
-            feedback_source_type=ls_schemas.FeedbackSourceType.MODEL,
         )
-        return evaluation_result
+        return results[0]
 
     def create_feedback(
         self,
@@ -2003,6 +2190,17 @@ class Client:
         )
         if source_run_id is not None and "__run" not in feedback_source.metadata:
             feedback_source.metadata["__run"] = {"run_id": str(source_run_id)}
+        if feedback_source.metadata and "__run" in feedback_source.metadata:
+            # Validate that the linked run ID is a valid UUID
+            # Run info may be a base model or dict.
+            _run_meta: Union[dict, Any] = feedback_source.metadata["__run"]
+            if hasattr(_run_meta, "dict") and callable(_run_meta):
+                _run_meta = _run_meta.dict()
+            if "run_id" in _run_meta:
+                _run_meta["run_id"] = str(
+                    _as_uuid(feedback_source.metadata["__run"]["run_id"])
+                )
+            feedback_source.metadata["__run"] = _run_meta
         feedback = ls_schemas.FeedbackCreate(
             id=feedback_id or uuid.uuid4(),
             run_id=run_id,
@@ -2068,7 +2266,7 @@ class Client:
         if comment is not None:
             feedback_update["comment"] = comment
         response = self.session.patch(
-            self.api_url + f"/feedback/{feedback_id}",
+            self.api_url + f"/feedback/{_as_uuid(feedback_id)}",
             headers={**self._headers, "Content-Type": "application/json"},
             data=json.dumps(feedback_update, default=_serialize_json),
         )
@@ -2087,7 +2285,7 @@ class Client:
         Feedback
             The feedback.
         """
-        response = self._get_with_retries(f"/feedback/{feedback_id}")
+        response = self._get_with_retries(f"/feedback/{_as_uuid(feedback_id)}")
         return ls_schemas.Feedback(**response.json())
 
     def list_feedback(
@@ -2140,7 +2338,7 @@ class Client:
             The ID of the feedback to delete.
         """
         response = self.session.delete(
-            f"{self.api_url}/feedback/{feedback_id}",
+            f"{self.api_url}/feedback/{_as_uuid(feedback_id)}",
             headers=self._headers,
         )
         ls_utils.raise_for_status_with_text(response)
@@ -2153,6 +2351,7 @@ class Client:
         evaluation: Optional[Any] = None,
         concurrency_level: int = 5,
         project_name: Optional[str] = None,
+        project_metadata: Optional[Dict[str, Any]] = None,
         verbose: bool = False,
         tags: Optional[List[str]] = None,
         input_mapper: Optional[Callable[[Dict], Any]] = None,
@@ -2170,6 +2369,7 @@ class Client:
             concurrency_level: The number of async tasks to run concurrently.
             project_name: Name of the project to store the traces in.
                 Defaults to {dataset_name}-{chain class name}-{datetime}.
+            project_metadata: Optional metadata to store with the project.
             verbose: Whether to print progress.
             tags: Tags to add to each run in the project.
             input_mapper: A function to map to the inputs dictionary from an Example
@@ -2287,6 +2487,7 @@ class Client:
         evaluation: Optional[Any] = None,
         concurrency_level: int = 5,
         project_name: Optional[str] = None,
+        project_metadata: Optional[Dict[str, Any]] = None,
         verbose: bool = False,
         tags: Optional[List[str]] = None,
         input_mapper: Optional[Callable[[Dict], Any]] = None,
@@ -2305,6 +2506,7 @@ class Client:
             concurrency_level: The number of tasks to execute concurrently.
             project_name: Name of the project to store the traces in.
                 Defaults to {dataset_name}-{chain class name}-{datetime}.
+            project_metadata: Metadata to store with the project.
             verbose: Whether to print progress.
             tags: Tags to add to each run in the project.
             input_mapper: A function to map to the inputs dictionary from an Example

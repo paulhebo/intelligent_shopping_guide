@@ -1,6 +1,6 @@
-../../bin/jsondiff,sha256=1Uket1tZrChQIaYOu6kiFiq5wDcZg5Ilqt8Jr6TeYas,1242
-../../bin/jsonpatch,sha256=ZDaG-DUyLE33-dR8bmVw5Vs1mEaRypXuZ52NyOSgLoE,3903
-__pycache__/jsonpatch.cpython-310.pyc,,
+../../../bin/jsondiff,sha256=CKVQgVRQAMVI5mb3NmiM0eYIR0INKek-7Vr7YzPHEo8,1244
+../../../bin/jsonpatch,sha256=arG8UiRDaM_zrNtskw9jf5LIUPlf0ZyEzMduIWe9A94,3905
+__pycache__/jsonpatch.cpython-39.pyc,,
 jsonpatch-1.33.dist-info/AUTHORS,sha256=hOtEnBGbfDegKjzMDEl5vuVJyczbI2PlYE2ho4LjGNQ,140
 jsonpatch-1.33.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
 jsonpatch-1.33.dist-info/LICENSE,sha256=Q5PrZzP6HjZ_QXabOC9PG-e_Da6x4kPtkrP12Lr9I28,1481

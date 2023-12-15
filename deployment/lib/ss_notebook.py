@@ -54,7 +54,7 @@ class NotebookStack(cdk.Stack):
         self.notebook_job_role.add_managed_policy(_iam.ManagedPolicy.from_aws_managed_policy_name('AmazonSageMakerFullAccess'))
         self.notebook_job_role.add_managed_policy(_iam.ManagedPolicy.from_aws_managed_policy_name('SecretsManagerReadWrite'))
         self.notebook_job_role.add_managed_policy(_iam.ManagedPolicy.from_aws_managed_policy_name('AmazonDynamoDBFullAccess'))
-        self.notebook_job_role.add_managed_policy(_iam.ManagedPolicy.from_aws_managed_policy_name('AmazonPersonalizeFullAccess'))
+        self.notebook_job_role.add_managed_policy(_iam.ManagedPolicy.from_aws_managed_policy_name('service-role/AmazonPersonalizeFullAccess'))
         self.notebook_job_role.add_managed_policy(_iam.ManagedPolicy.from_aws_managed_policy_name('IAMFullAccess'))
 
         print('Deploying SageMaker via Notebook...')

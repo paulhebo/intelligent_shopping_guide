@@ -9,6 +9,7 @@ from langchain.chains.query_constructor.ir import (
     StructuredQuery,
     Visitor,
 )
+from langchain.chains.query_constructor.schema import VirtualColumnName
 
 COMPARATOR_TO_TQL = {
     Comparator.EQ: "==",
@@ -63,6 +64,15 @@ class DeepLakeTranslator(Visitor):
         return "(" + (" " + operator + " ").join(args) + ")"
 
     def visit_comparison(self, comparison: Comparison) -> str:
+        if isinstance(comparison.attribute, VirtualColumnName):
+            attribute = comparison.attribute()
+        elif isinstance(comparison.attribute, str):
+            attribute = comparison.attribute
+        else:
+            raise TypeError(
+                f"Unknown type {type(comparison.attribute)} for `comparison.attribute`!"
+            )
+
         comparator = self._format_func(comparison.comparator)
         values = comparison.value
         if isinstance(values, list):
@@ -75,7 +85,7 @@ class DeepLakeTranslator(Visitor):
 
         if not can_cast_to_float(comparison.value):
             values = f"'{values}'"
-        return f"metadata['{comparison.attribute}'] {comparator} {values}"
+        return f"metadata['{attribute}'] {comparator} {values}"
 
     def visit_structured_query(
         self, structured_query: StructuredQuery

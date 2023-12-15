@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, List, Optional, Sequence, Union
 
+from langchain.chains.query_constructor.schema import VirtualColumnName
 from langchain.pydantic_v1 import BaseModel
 
 
@@ -100,7 +101,7 @@ class Comparison(FilterDirective):
     """A comparison to a value."""
 
     comparator: Comparator
-    attribute: str
+    attribute: Union[str, VirtualColumnName]
     value: Any
 
 
