@@ -64,7 +64,11 @@
       "input_token": "NextToken",
       "limit_key": "MaxResults",
       "output_token": "NextToken",
-      "result_key": "RoutingProfileQueueConfigSummaryList"
+      "result_key": "RoutingProfileQueueConfigSummaryList",
+      "non_aggregate_keys": [
+        "LastModifiedRegion",
+        "LastModifiedTime"
+      ]
     },
     "ListApprovedOrigins": {
       "input_token": "NextToken",
@@ -130,7 +134,11 @@
       "input_token": "NextToken",
       "limit_key": "MaxResults",
       "output_token": "NextToken",
-      "result_key": "QuickConnectSummaryList"
+      "result_key": "QuickConnectSummaryList",
+      "non_aggregate_keys": [
+        "LastModifiedRegion",
+        "LastModifiedTime"
+      ]
     },
     "ListBots": {
       "input_token": "NextToken",
@@ -148,7 +156,11 @@
       "input_token": "NextToken",
       "limit_key": "MaxResults",
       "output_token": "NextToken",
-      "result_key": "Permissions"
+      "result_key": "Permissions",
+      "non_aggregate_keys": [
+        "LastModifiedRegion",
+        "LastModifiedTime"
+      ]
     },
     "ListContactReferences": {
       "input_token": "NextToken",
@@ -255,6 +267,73 @@
       "limit_key": "MaxResults",
       "output_token": "NextToken",
       "result_key": "EvaluationFormSummaryList"
+    },
+    "SearchHoursOfOperations": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "non_aggregate_keys": [
+        "ApproximateTotalCount"
+      ],
+      "output_token": "NextToken",
+      "result_key": "HoursOfOperations"
+    },
+    "SearchPrompts": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "non_aggregate_keys": [
+        "ApproximateTotalCount"
+      ],
+      "output_token": "NextToken",
+      "result_key": "Prompts"
+    },
+    "SearchQuickConnects": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "non_aggregate_keys": [
+        "ApproximateTotalCount"
+      ],
+      "output_token": "NextToken",
+      "result_key": "QuickConnects"
+    },
+    "SearchResourceTags": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "output_token": "NextToken",
+      "result_key": "Tags"
+    },
+    "ListTrafficDistributionGroupUsers": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "output_token": "NextToken",
+      "result_key": "TrafficDistributionGroupUserSummaryList"
+    },
+    "ListViewVersions": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "output_token": "NextToken",
+      "result_key": "ViewVersionSummaryList"
+    },
+    "ListViews": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "output_token": "NextToken",
+      "result_key": "ViewsSummaryList"
+    },
+    "ListSecurityProfileApplications": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "output_token": "NextToken",
+      "result_key": "Applications",
+      "non_aggregate_keys": [
+        "LastModifiedRegion",
+        "LastModifiedTime"
+      ]
+    },
+    "ListFlowAssociations": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "output_token": "NextToken",
+      "result_key": "FlowAssociationSummaryList"
     }
   }
 }

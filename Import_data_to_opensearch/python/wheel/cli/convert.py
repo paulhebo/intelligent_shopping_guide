@@ -42,7 +42,7 @@ class _bdist_wheel_tag(bdist_wheel):
             return bdist_wheel.get_tag(self)
 
 
-def egg2wheel(egg_path: str, dest_dir: str):
+def egg2wheel(egg_path: str, dest_dir: str) -> None:
     filename = os.path.basename(egg_path)
     match = egg_info_re.match(filename)
     if not match:
@@ -188,7 +188,7 @@ def wininst2wheel(path, dest_dir):
         else:
             paths = {"platlib": ""}
 
-        dist_info = "%(name)s-%(ver)s" % info
+        dist_info = "{name}-{ver}".format(**info)
         datadir = "%s.data/" % dist_info
 
         # rewrite paths to trick ZipFile into extracting an egg

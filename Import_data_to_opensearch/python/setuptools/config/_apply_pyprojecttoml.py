@@ -14,8 +14,19 @@ from email.headerregistry import Address
 from functools import partial, reduce
 from itertools import chain
 from types import MappingProxyType
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple,
-                    Type, Union, cast)
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 from ..warnings import SetuptoolsWarning, SetuptoolsDeprecationWarning
 
@@ -201,12 +212,12 @@ def _dependencies(dist: "Distribution", val: list, _root_dir):
     if getattr(dist, "install_requires", []):
         msg = "`install_requires` overwritten in `pyproject.toml` (dependencies)"
         SetuptoolsWarning.emit(msg)
-    _set_config(dist, "install_requires", val)
+    dist.install_requires = val
 
 
 def _optional_dependencies(dist: "Distribution", val: dict, _root_dir):
-    existing = getattr(dist, "extras_require", {})
-    _set_config(dist, "extras_require", {**existing, **val})
+    existing = getattr(dist, "extras_require", None) or {}
+    dist.extras_require = {**existing, **val}
 
 
 def _unify_entry_points(project_table: dict):
@@ -285,6 +296,16 @@ def _get_previous_entrypoints(dist: "Distribution") -> Dict[str, list]:
     return {k: v for k, v in value.items() if k not in ignore}
 
 
+def _get_previous_scripts(dist: "Distribution") -> Optional[list]:
+    value = getattr(dist, "entry_points", None) or {}
+    return value.get("console_scripts")
+
+
+def _get_previous_gui_scripts(dist: "Distribution") -> Optional[list]:
+    value = getattr(dist, "entry_points", None) or {}
+    return value.get("gui_scripts")
+
+
 def _attrgetter(attr):
     """
     Similar to ``operator.attrgetter`` but returns None if ``attr`` is not found
@@ -312,9 +333,11 @@ def _some_attrgetter(*items):
     >>> _some_attrgetter("d", "e", "f")(obj) is None
     True
     """
+
     def _acessor(obj):
         values = (_attrgetter(i)(obj) for i in items)
         return next((i for i in values if i is not None), None)
+
     return _acessor
 
 
@@ -337,8 +360,13 @@ TOOL_TABLE_DEPRECATIONS = {
     )
 }
 
-SETUPTOOLS_PATCHES = {"long_description_content_type", "project_urls",
-                      "provides_extras", "license_file", "license_files"}
+SETUPTOOLS_PATCHES = {
+    "long_description_content_type",
+    "project_urls",
+    "provides_extras",
+    "license_file",
+    "license_files",
+}
 
 _PREVIOUSLY_DEFINED = {
     "name": _attrgetter("metadata.name"),
@@ -353,8 +381,10 @@ _PREVIOUSLY_DEFINED = {
     "classifiers": _attrgetter("metadata.classifiers"),
     "urls": _attrgetter("metadata.project_urls"),
     "entry-points": _get_previous_entrypoints,
-    "dependencies": _some_attrgetter("_orig_install_requires", "install_requires"),
-    "optional-dependencies": _some_attrgetter("_orig_extras_require", "extras_require"),
+    "scripts": _get_previous_scripts,
+    "gui-scripts": _get_previous_gui_scripts,
+    "dependencies": _attrgetter("install_requires"),
+    "optional-dependencies": _attrgetter("extras_require"),
 }
 
 

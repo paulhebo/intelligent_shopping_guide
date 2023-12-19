@@ -53,15 +53,8 @@ _T = TypeVar("_T", bound=Any)
 
 _T_co = TypeVar("_T_co", bound=Any, covariant=True)
 
-# I would have preferred this were bound=object however it seems
-# to not travel in all situations when defined in that way.
-_O = TypeVar("_O", bound=Any)
+_O = TypeVar("_O", bound=object)
 """The 'ORM mapped object' type.
-
-"""
-
-_OO = TypeVar("_OO", bound=object)
-"""The 'ORM mapped object, that's definitely object' type.
 
 """
 
@@ -100,6 +93,7 @@ class _OrmKnownExecutionOptions(_CoreKnownExecutionOptions, total=False):
     dml_strategy: DMLStrategyArgument
     is_delete_using: bool
     is_update_from: bool
+    render_nulls: bool
 
 
 OrmExecuteOptionsParameter = Union[
@@ -126,7 +120,7 @@ class _LoaderCallable(Protocol):
 def is_orm_option(
     opt: ExecutableOption,
 ) -> TypeGuard[ORMOption]:
-    return not opt._is_core  # type: ignore
+    return not opt._is_core
 
 
 def is_user_defined_option(

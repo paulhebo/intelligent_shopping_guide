@@ -1,12 +1,11 @@
-"""Wrapper around AI21 APIs."""
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import requests
-from pydantic import BaseModel, Extra, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
-from langchain.utils import get_from_dict_or_env
+from langchain.pydantic_v1 import BaseModel, Extra, SecretStr, root_validator
+from langchain.utils import convert_to_secret_str, get_from_dict_or_env
 
 
 class AI21PenaltyData(BaseModel):
@@ -21,16 +20,16 @@ class AI21PenaltyData(BaseModel):
 
 
 class AI21(LLM):
-    """Wrapper around AI21 large language models.
+    """AI21 large language models.
 
     To use, you should have the environment variable ``AI21_API_KEY``
-    set with your API key.
+    set with your API key or pass it as a named parameter to the constructor.
 
     Example:
         .. code-block:: python
 
             from langchain.llms import AI21
-            ai21 = AI21(model="j2-jumbo-instruct")
+            ai21 = AI21(ai21_api_key="my-api-key", model="j2-jumbo-instruct")
     """
 
     model: str = "j2-jumbo-instruct"
@@ -63,7 +62,7 @@ class AI21(LLM):
     logitBias: Optional[Dict[str, float]] = None
     """Adjust the probability of specific tokens being generated."""
 
-    ai21_api_key: Optional[str] = None
+    ai21_api_key: Optional[SecretStr] = None
 
     stop: Optional[List[str]] = None
 
@@ -78,7 +77,9 @@ class AI21(LLM):
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that api key exists in environment."""
-        ai21_api_key = get_from_dict_or_env(values, "ai21_api_key", "AI21_API_KEY")
+        ai21_api_key = convert_to_secret_str(
+            get_from_dict_or_env(values, "ai21_api_key", "AI21_API_KEY")
+        )
         values["ai21_api_key"] = ai21_api_key
         return values
 
@@ -112,6 +113,7 @@ class AI21(LLM):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         """Call out to AI21's complete endpoint.
 
@@ -140,10 +142,12 @@ class AI21(LLM):
                 base_url = "https://api.ai21.com/studio/v1/experimental"
             else:
                 base_url = "https://api.ai21.com/studio/v1"
+        params = {**self._default_params, **kwargs}
+        self.ai21_api_key = cast(SecretStr, self.ai21_api_key)
         response = requests.post(
             url=f"{base_url}/{self.model}/complete",
-            headers={"Authorization": f"Bearer {self.ai21_api_key}"},
-            json={"prompt": prompt, "stopSequences": stop, **self._default_params},
+            headers={"Authorization": f"Bearer {self.ai21_api_key.get_secret_value()}"},
+            json={"prompt": prompt, "stopSequences": stop, **params},
         )
         if response.status_code != 200:
             optional_detail = response.json().get("error")

@@ -2,11 +2,14 @@
 
 from typing import Any, Dict, List
 
-from pydantic import Field
-
+from langchain.callbacks.manager import (
+    AsyncCallbackManagerForChainRun,
+    CallbackManagerForChainRun,
+)
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.qa_with_sources.base import BaseQAWithSourcesChain
 from langchain.docstore.document import Document
+from langchain.pydantic_v1 import Field
 from langchain.schema import BaseRetriever
 
 
@@ -28,9 +31,7 @@ class RetrievalQAWithSourcesChain(BaseQAWithSourcesChain):
             self.combine_documents_chain, StuffDocumentsChain
         ):
             tokens = [
-                self.combine_documents_chain.llm_chain.llm.get_num_tokens(
-                    doc.page_content
-                )
+                self.combine_documents_chain.llm_chain._get_num_tokens(doc.page_content)
                 for doc in docs
             ]
             token_count = sum(tokens[:num_docs])
@@ -40,12 +41,25 @@ class RetrievalQAWithSourcesChain(BaseQAWithSourcesChain):
 
         return docs[:num_docs]
 
-    def _get_docs(self, inputs: Dict[str, Any]) -> List[Document]:
+    def _get_docs(
+        self, inputs: Dict[str, Any], *, run_manager: CallbackManagerForChainRun
+    ) -> List[Document]:
         question = inputs[self.question_key]
-        docs = self.retriever.get_relevant_documents(question)
+        docs = self.retriever.get_relevant_documents(
+            question, callbacks=run_manager.get_child()
+        )
         return self._reduce_tokens_below_limit(docs)
 
-    async def _aget_docs(self, inputs: Dict[str, Any]) -> List[Document]:
+    async def _aget_docs(
+        self, inputs: Dict[str, Any], *, run_manager: AsyncCallbackManagerForChainRun
+    ) -> List[Document]:
         question = inputs[self.question_key]
-        docs = await self.retriever.aget_relevant_documents(question)
+        docs = await self.retriever.aget_relevant_documents(
+            question, callbacks=run_manager.get_child()
+        )
         return self._reduce_tokens_below_limit(docs)
+
+    @property
+    def _chain_type(self) -> str:
+        """Return the chain type."""
+        return "retrieval_qa_with_sources_chain"

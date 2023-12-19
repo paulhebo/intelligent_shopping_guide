@@ -2,11 +2,12 @@ import abc
 import dataclasses
 import functools
 import inspect
+import sys
 from dataclasses import Field, fields
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, Union, Type, get_type_hints
 from enum import Enum
 
-from marshmallow import ValidationError
+from marshmallow.exceptions import ValidationError  # type: ignore
 
 from dataclasses_json.utils import CatchAllVar
 
@@ -179,7 +180,11 @@ class _CatchAllUndefinedParameters(_UndefinedParameterAction):
         has_default_factory = not isinstance(catch_all_field.default_factory,
                                              # type: ignore
                                              dataclasses._MISSING_TYPE)
-        default_value = _CatchAllUndefinedParameters._SentinelNoDefault
+        # TODO: black this for proper formatting
+        default_value: Union[
+            Type[_CatchAllUndefinedParameters._SentinelNoDefault], Any] = _CatchAllUndefinedParameters\
+            ._SentinelNoDefault
+
         if has_default:
             default_value = catch_all_field.default
         elif has_default_factory:
@@ -193,7 +198,7 @@ class _CatchAllUndefinedParameters(_UndefinedParameterAction):
     @staticmethod
     def handle_to_dict(obj, kvs: Dict[Any, Any]) -> Dict[Any, Any]:
         catch_all_field = \
-            _CatchAllUndefinedParameters._get_catch_all_field(obj)
+            _CatchAllUndefinedParameters._get_catch_all_field(obj.__class__)
         undefined_parameters = kvs.pop(catch_all_field.name)
         if isinstance(undefined_parameters, dict):
             kvs.update(
@@ -242,8 +247,10 @@ class _CatchAllUndefinedParameters(_UndefinedParameterAction):
 
     @staticmethod
     def _get_catch_all_field(cls) -> Field:
+        cls_globals = vars(sys.modules[cls.__module__])
+        types = get_type_hints(cls, globalns=cls_globals)
         catch_all_fields = list(
-            filter(lambda f: f.type == Optional[CatchAllVar], fields(cls)))
+            filter(lambda f: types[f.name] == Optional[CatchAllVar], fields(cls)))
         number_of_catch_all_fields = len(catch_all_fields)
         if number_of_catch_all_fields == 0:
             raise UndefinedParameterError(

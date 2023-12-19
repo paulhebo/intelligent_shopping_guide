@@ -1,20 +1,22 @@
 """Tool for the Arxiv API."""
 
-from typing import Optional
+from typing import Optional, Type
 
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.callbacks.manager import CallbackManagerForToolRun
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools.base import BaseTool
 from langchain.utilities.arxiv import ArxivAPIWrapper
 
 
-class ArxivQueryRun(BaseTool):
-    """Tool that adds the capability to search using the Arxiv API."""
+class ArxivInput(BaseModel):
+    query: str = Field(description="search query to look up")
 
-    name = "Arxiv"
-    description = (
+
+class ArxivQueryRun(BaseTool):
+    """Tool that searches the Arxiv API."""
+
+    name: str = "arxiv"
+    description: str = (
         "A wrapper around Arxiv.org "
         "Useful for when you need to answer questions about Physics, Mathematics, "
         "Computer Science, Quantitative Biology, Quantitative Finance, Statistics, "
@@ -22,7 +24,8 @@ class ArxivQueryRun(BaseTool):
         "from scientific articles on arxiv.org. "
         "Input should be a search query."
     )
-    api_wrapper: ArxivAPIWrapper
+    api_wrapper: ArxivAPIWrapper = Field(default_factory=ArxivAPIWrapper)
+    args_schema: Type[BaseModel] = ArxivInput
 
     def _run(
         self,
@@ -31,11 +34,3 @@ class ArxivQueryRun(BaseTool):
     ) -> str:
         """Use the Arxiv tool."""
         return self.api_wrapper.run(query)
-
-    async def _arun(
-        self,
-        query: str,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
-        """Use the Arxiv tool asynchronously."""
-        raise NotImplementedError("ArxivAPIWrapper does not support async")

@@ -16,7 +16,9 @@ from botocore import waiter, xform_name
 from botocore.args import ClientArgsCreator
 from botocore.auth import AUTH_TYPE_MAPS
 from botocore.awsrequest import prepare_request_dict
+from botocore.compress import maybe_compress_request
 from botocore.config import Config
+from botocore.credentials import RefreshableCredentials
 from botocore.discovery import (
     EndpointDiscoveryHandler,
     EndpointDiscoveryManager,
@@ -39,10 +41,12 @@ from botocore.httpchecksum import (
 from botocore.model import ServiceModel
 from botocore.paginate import Paginator
 from botocore.retries import adaptive, standard
+from botocore.useragent import UserAgentString
 from botocore.utils import (
     CachedProperty,
     EventbridgeSignerSetter,
     S3ControlArnParamHandlerv2,
+    S3ExpressIdentityResolver,
     S3RegionRedirectorv2,
     ensure_boolean,
     get_service_module_name,
@@ -91,6 +95,7 @@ class ClientCreator:
         response_parser_factory=None,
         exceptions_factory=None,
         config_store=None,
+        user_agent_creator=None,
     ):
         self._loader = loader
         self._endpoint_resolver = endpoint_resolver
@@ -105,6 +110,7 @@ class ClientCreator:
         # config and environment variables (and potentially more in the
         # future).
         self._config_store = config_store
+        self._user_agent_creator = user_agent_creator
 
     def create_client(
         self,
@@ -175,6 +181,7 @@ class ClientCreator:
             client_config=client_config,
             scoped_config=scoped_config,
         )
+        self._register_s3express_events(client=service_client)
         self._register_s3_control_events(client=service_client)
         self._register_endpoint_discovery(
             service_client, endpoint_url, client_config
@@ -367,6 +374,18 @@ class ClientCreator:
             endpoint_url=endpoint_url,
         ).register(client.meta.events)
 
+    def _register_s3express_events(
+        self,
+        client,
+        endpoint_bridge=None,
+        endpoint_url=None,
+        client_config=None,
+        scoped_config=None,
+    ):
+        if client.meta.service_model.service_name != 's3':
+            return
+        S3ExpressIdentityResolver(client, RefreshableCredentials).register()
+
     def _register_s3_events(
         self,
         client,
@@ -455,6 +474,9 @@ class ClientCreator:
         if signature_version.startswith('v4a'):
             return
 
+        if signature_version.startswith('v4-s3express'):
+            return f'{signature_version}'
+
         for suffix in ['-query', '-presign-post']:
             if signature_version.endswith(suffix):
                 return f's3{suffix}'
@@ -481,6 +503,7 @@ class ClientCreator:
             self._loader,
             self._exceptions_factory,
             config_store=self._config_store,
+            user_agent_creator=self._user_agent_creator,
         )
         return args_creator.get_client_args(
             service_model,
@@ -840,6 +863,7 @@ class BaseClient:
         partition,
         exceptions_factory,
         endpoint_ruleset_resolver=None,
+        user_agent_creator=None,
     ):
         self._serializer = serializer
         self._endpoint = endpoint
@@ -859,6 +883,13 @@ class BaseClient:
         )
         self._exceptions_factory = exceptions_factory
         self._exceptions = None
+        self._user_agent_creator = user_agent_creator
+        if self._user_agent_creator is None:
+            self._user_agent_creator = (
+                UserAgentString.from_environment().with_client_config(
+                    self._client_config
+                )
+            )
         self._register_handlers()
 
     def __getattr__(self, item):
@@ -917,9 +948,17 @@ class BaseClient:
             operation_model=operation_model,
             context=request_context,
         )
-        endpoint_url, additional_headers = self._resolve_endpoint_ruleset(
+        (
+            endpoint_url,
+            additional_headers,
+            properties,
+        ) = self._resolve_endpoint_ruleset(
             operation_model, api_params, request_context
         )
+        if properties:
+            # Pass arbitrary endpoint info with the Request
+            # for use during construction.
+            request_context['endpoint_properties'] = properties
         request_dict = self._convert_to_request_dict(
             api_params=api_params,
             operation_model=operation_model,
@@ -943,6 +982,9 @@ class BaseClient:
         if event_response is not None:
             http, parsed_response = event_response
         else:
+            maybe_compress_request(
+                self.meta.config, request_dict, operation_model
+            )
             apply_request_checksum(request_dict)
             http, parsed_response = self._make_request(
                 operation_model, request_dict, request_context
@@ -959,7 +1001,10 @@ class BaseClient:
         )
 
         if http.status_code >= 300:
-            error_code = parsed_response.get("Error", {}).get("Code")
+            error_info = parsed_response.get("Error", {})
+            error_code = error_info.get("QueryErrorCode") or error_info.get(
+                "Code"
+            )
             error_class = self.exceptions.from_code(error_code)
             raise error_class(parsed_response, operation_name)
         else:
@@ -996,7 +1041,7 @@ class BaseClient:
         if headers is not None:
             request_dict['headers'].update(headers)
         if set_user_agent_header:
-            user_agent = self._client_config.user_agent
+            user_agent = self._user_agent_creator.to_string()
         else:
             user_agent = None
         prepare_request_dict(
@@ -1046,7 +1091,7 @@ class BaseClient:
         returned.
 
         Use ignore_signing_region for generating presigned URLs or any other
-        situtation where the signing region information from the ruleset
+        situation where the signing region information from the ruleset
         resolver should be ignored.
 
         Returns tuple of URL and headers dictionary. Additionally, the
@@ -1056,6 +1101,7 @@ class BaseClient:
         if self._ruleset_resolver is None:
             endpoint_url = self.meta.endpoint_url
             additional_headers = {}
+            endpoint_properties = {}
         else:
             endpoint_info = self._ruleset_resolver.construct_endpoint(
                 operation_model=operation_model,
@@ -1064,6 +1110,7 @@ class BaseClient:
             )
             endpoint_url = endpoint_info.url
             additional_headers = endpoint_info.headers
+            endpoint_properties = endpoint_info.properties
             # If authSchemes is present, overwrite default auth type and
             # signing context derived from service model.
             auth_schemes = endpoint_info.properties.get('authSchemes')
@@ -1080,7 +1127,7 @@ class BaseClient:
                 else:
                     request_context['signing'] = signing_context
 
-        return endpoint_url, additional_headers
+        return endpoint_url, additional_headers, endpoint_properties
 
     def get_paginator(self, operation_name):
         """Create a paginator for an operation.
@@ -1233,6 +1280,13 @@ class BaseClient:
         return self._exceptions_factory.create_client_exceptions(
             self._service_model
         )
+
+    def _get_credentials(self):
+        """
+        This private interface is subject to abrupt breaking changes, including
+        removal, in any botocore release.
+        """
+        return self._request_signer._credentials
 
 
 class ClientMeta:

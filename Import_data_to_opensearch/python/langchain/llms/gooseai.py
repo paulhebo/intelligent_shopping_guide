@@ -1,18 +1,16 @@
-"""Wrapper around GooseAI API."""
 import logging
 from typing import Any, Dict, List, Mapping, Optional
 
-from pydantic import Extra, Field, root_validator
-
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
-from langchain.utils import get_from_dict_or_env
+from langchain.pydantic_v1 import Extra, Field, SecretStr, root_validator
+from langchain.utils import convert_to_secret_str, get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
 
 
 class GooseAI(LLM):
-    """Wrapper around OpenAI large language models.
+    """GooseAI large language models.
 
     To use, you should have the ``openai`` python package installed, and the
     environment variable ``GOOSEAI_API_KEY`` set with your API key.
@@ -22,6 +20,7 @@ class GooseAI(LLM):
 
     Example:
         .. code-block:: python
+
             from langchain.llms import GooseAI
             gooseai = GooseAI(model_name="gpt-neo-20b")
 
@@ -61,7 +60,7 @@ class GooseAI(LLM):
     logit_bias: Optional[Dict[str, float]] = Field(default_factory=dict)
     """Adjust the probability of specific tokens being generated."""
 
-    gooseai_api_key: Optional[str] = None
+    gooseai_api_key: Optional[SecretStr] = None
 
     class Config:
         """Configuration for this pydantic config."""
@@ -80,7 +79,7 @@ class GooseAI(LLM):
                     raise ValueError(f"Found {field_name} supplied twice.")
                 logger.warning(
                     f"""WARNING! {field_name} is not default parameter.
-                    {field_name} was transfered to model_kwargs.
+                    {field_name} was transferred to model_kwargs.
                     Please confirm that {field_name} is what you intended."""
                 )
                 extra[field_name] = values.pop(field_name)
@@ -90,17 +89,18 @@ class GooseAI(LLM):
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that api key and python package exists in environment."""
-        gooseai_api_key = get_from_dict_or_env(
-            values, "gooseai_api_key", "GOOSEAI_API_KEY"
+        gooseai_api_key = convert_to_secret_str(
+            get_from_dict_or_env(values, "gooseai_api_key", "GOOSEAI_API_KEY")
         )
+        values["gooseai_api_key"] = gooseai_api_key
         try:
             import openai
 
-            openai.api_key = gooseai_api_key
+            openai.api_key = gooseai_api_key.get_secret_value()
             openai.api_base = "https://api.goose.ai/v1"
             values["client"] = openai.Completion
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import openai python package. "
                 "Please install it with `pip install openai`."
             )
@@ -136,6 +136,7 @@ class GooseAI(LLM):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         """Call the GooseAI API."""
         params = self._default_params
@@ -143,6 +144,8 @@ class GooseAI(LLM):
             if "stop" in params:
                 raise ValueError("`stop` found in both the input and default params.")
             params["stop"] = stop
+
+        params = {**params, **kwargs}
 
         response = self.client.create(engine=self.model_name, prompt=prompt, **params)
         text = response.choices[0].text

@@ -1,4 +1,3 @@
-"""Logic for converting internal query language to a valid Pinecone query."""
 from typing import Dict, Tuple, Union
 
 from langchain.chains.query_constructor.ir import (
@@ -9,27 +8,28 @@ from langchain.chains.query_constructor.ir import (
     StructuredQuery,
     Visitor,
 )
+from langchain.chains.query_constructor.schema import VirtualColumnName
 
 
 class PineconeTranslator(Visitor):
-    """Logic for converting internal query language elements to valid filters."""
+    """Translate `Pinecone` internal query language elements to valid filters."""
 
-    allowed_operators = [Operator.AND, Operator.OR]
+    allowed_comparators = (
+        Comparator.EQ,
+        Comparator.NE,
+        Comparator.LT,
+        Comparator.LTE,
+        Comparator.GT,
+        Comparator.GTE,
+        Comparator.IN,
+        Comparator.NIN,
+    )
+    """Subset of allowed logical comparators."""
+    allowed_operators = (Operator.AND, Operator.OR)
     """Subset of allowed logical operators."""
 
     def _format_func(self, func: Union[Operator, Comparator]) -> str:
-        if isinstance(func, Operator) and self.allowed_operators is not None:
-            if func not in self.allowed_operators:
-                raise ValueError(
-                    f"Received disallowed operator {func}. Allowed "
-                    f"comparators are {self.allowed_operators}"
-                )
-        if isinstance(func, Comparator) and self.allowed_comparators is not None:
-            if func not in self.allowed_comparators:
-                raise ValueError(
-                    f"Received disallowed comparator {func}. Allowed "
-                    f"comparators are {self.allowed_comparators}"
-                )
+        self._validate_func(func)
         return f"${func.value}"
 
     def visit_operation(self, operation: Operation) -> Dict:
@@ -37,11 +37,20 @@ class PineconeTranslator(Visitor):
         return {self._format_func(operation.operator): args}
 
     def visit_comparison(self, comparison: Comparison) -> Dict:
-        return {
-            comparison.attribute: {
-                self._format_func(comparison.comparator): comparison.value
-            }
-        }
+        if comparison.comparator in (Comparator.IN, Comparator.NIN) and not isinstance(
+            comparison.value, list
+        ):
+            comparison.value = [comparison.value]
+        if isinstance(comparison.attribute, VirtualColumnName):
+            attribute = comparison.attribute()
+        elif isinstance(comparison.attribute, str):
+            attribute = comparison.attribute
+        else:
+            raise TypeError(
+                f"Unknown type {type(comparison.attribute)} for `comparison.attribute`!"
+            )
+
+        return {attribute: {self._format_func(comparison.comparator): comparison.value}}
 
     def visit_structured_query(
         self, structured_query: StructuredQuery

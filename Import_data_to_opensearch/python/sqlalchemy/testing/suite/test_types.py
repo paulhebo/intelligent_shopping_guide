@@ -27,8 +27,8 @@ from ... import cast
 from ... import Date
 from ... import DateTime
 from ... import Float
-from ... import Identity
 from ... import Integer
+from ... import Interval
 from ... import JSON
 from ... import literal
 from ... import literal_column
@@ -47,7 +47,6 @@ from ... import Unicode
 from ... import UnicodeText
 from ... import UUID
 from ... import Uuid
-from ...dialects.postgresql import BYTEA
 from ...orm import declarative_base
 from ...orm import Session
 from ...sql import sqltypes
@@ -84,6 +83,11 @@ class _LiteralRoundTripFixture:
                 )
                 connection.execute(ins)
 
+            ins = t.insert().values(
+                x=literal(None, type_, literal_execute=True)
+            )
+            connection.execute(ins)
+
             if support_whereclause and self.supports_whereclause:
                 if compare:
                     stmt = t.select().where(
@@ -110,7 +114,7 @@ class _LiteralRoundTripFixture:
                         )
                     )
             else:
-                stmt = t.select()
+                stmt = t.select().where(t.c.x.is_not(None))
 
             rows = connection.execute(stmt).all()
             assert rows, "No rows returned"
@@ -119,6 +123,10 @@ class _LiteralRoundTripFixture:
                 if filter_ is not None:
                     value = filter_(value)
                 assert value in output
+
+            stmt = t.select().where(t.c.x.is_(None))
+            rows = connection.execute(stmt).all()
+            eq_(rows, [(None,)])
 
         return run
 
@@ -317,68 +325,6 @@ class BinaryTest(_LiteralRoundTripFixture, fixtures.TablesTest):
         row = connection.execute(select(binary_table.c.pickle_data)).first()
         eq_(row, ({"foo": [1, 2, 3], "bar": "bat"},))
 
-    @testing.combinations(
-        (
-            LargeBinary(),
-            b"this is binary",
-        ),
-        (LargeBinary(), b"7\xe7\x9f"),
-        (BYTEA(), b"7\xe7\x9f", testing.only_on("postgresql")),
-        argnames="type_,value",
-    )
-    @testing.variation("sort_by_parameter_order", [True, False])
-    @testing.variation("multiple_rows", [True, False])
-    @testing.requires.insert_returning
-    def test_imv_returning(
-        self,
-        connection,
-        metadata,
-        sort_by_parameter_order,
-        type_,
-        value,
-        multiple_rows,
-    ):
-        """test #9739 (similar to #9701).
-
-        this tests insertmanyvalues as well as binary
-        RETURNING types
-
-        """
-        t = Table(
-            "t",
-            metadata,
-            Column("id", Integer, Identity(), primary_key=True),
-            Column("value", type_),
-        )
-
-        t.create(connection)
-
-        result = connection.execute(
-            t.insert().returning(
-                t.c.id,
-                t.c.value,
-                sort_by_parameter_order=bool(sort_by_parameter_order),
-            ),
-            [{"value": value} for i in range(10)]
-            if multiple_rows
-            else {"value": value},
-        )
-
-        if multiple_rows:
-            i_range = range(1, 11)
-        else:
-            i_range = range(1, 2)
-
-        eq_(
-            set(result),
-            {(id_, value) for id_ in i_range},
-        )
-
-        eq_(
-            set(connection.scalars(select(t.c.value))),
-            {value},
-        )
-
 
 class TextTest(_LiteralRoundTripFixture, fixtures.TablesTest):
     __requires__ = ("text_type",)
@@ -514,6 +460,102 @@ class StringTest(_LiteralRoundTripFixture, fixtures.TestBase):
             connection.scalar(select(literal("a") + "b" + "c" + "d" + "e")),
             "abcde",
         )
+
+
+class IntervalTest(_LiteralRoundTripFixture, fixtures.TestBase):
+    __requires__ = ("datetime_interval",)
+    __backend__ = True
+
+    datatype = Interval
+    data = datetime.timedelta(days=1, seconds=4)
+
+    def test_literal(self, literal_round_trip):
+        literal_round_trip(self.datatype, [self.data], [self.data])
+
+    def test_select_direct_literal_interval(self, connection):
+        row = connection.execute(select(literal(self.data))).first()
+        eq_(row, (self.data,))
+
+    def test_arithmetic_operation_literal_interval(self, connection):
+        now = datetime.datetime.now().replace(microsecond=0)
+        # Able to subtract
+        row = connection.execute(
+            select(literal(now) - literal(self.data))
+        ).scalar()
+        eq_(row, now - self.data)
+
+        # Able to Add
+        row = connection.execute(
+            select(literal(now) + literal(self.data))
+        ).scalar()
+        eq_(row, now + self.data)
+
+    @testing.fixture
+    def arithmetic_table_fixture(cls, metadata, connection):
+        class Decorated(TypeDecorator):
+            impl = cls.datatype
+            cache_ok = True
+
+        it = Table(
+            "interval_table",
+            metadata,
+            Column(
+                "id", Integer, primary_key=True, test_needs_autoincrement=True
+            ),
+            Column("interval_data", cls.datatype),
+            Column("date_data", DateTime),
+            Column("decorated_interval_data", Decorated),
+        )
+        it.create(connection)
+        return it
+
+    def test_arithmetic_operation_table_interval_and_literal_interval(
+        self, connection, arithmetic_table_fixture
+    ):
+        interval_table = arithmetic_table_fixture
+        data = datetime.timedelta(days=2, seconds=5)
+        connection.execute(
+            interval_table.insert(), {"id": 1, "interval_data": data}
+        )
+        # Subtraction Operation
+        value = connection.execute(
+            select(interval_table.c.interval_data - literal(self.data))
+        ).scalar()
+        eq_(value, data - self.data)
+
+        # Addition Operation
+        value = connection.execute(
+            select(interval_table.c.interval_data + literal(self.data))
+        ).scalar()
+        eq_(value, data + self.data)
+
+    def test_arithmetic_operation_table_date_and_literal_interval(
+        self, connection, arithmetic_table_fixture
+    ):
+        interval_table = arithmetic_table_fixture
+        now = datetime.datetime.now().replace(microsecond=0)
+        connection.execute(
+            interval_table.insert(), {"id": 1, "date_data": now}
+        )
+        # Subtraction Operation
+        value = connection.execute(
+            select(interval_table.c.date_data - literal(self.data))
+        ).scalar()
+        eq_(value, (now - self.data))
+
+        # Addition Operation
+        value = connection.execute(
+            select(interval_table.c.date_data + literal(self.data))
+        ).scalar()
+        eq_(value, (now + self.data))
+
+
+class PrecisionIntervalTest(IntervalTest):
+    __requires__ = ("datetime_interval",)
+    __backend__ = True
+
+    datatype = Interval(day_precision=9, second_precision=9)
+    data = datetime.timedelta(days=103, seconds=4)
 
 
 class _DateFixture(_LiteralRoundTripFixture, fixtures.TestBase):
@@ -747,7 +789,6 @@ class IntegerTest(_LiteralRoundTripFixture, fixtures.TestBase):
         literal_round_trip(Integer, [5], [5])
 
     def _huge_ints():
-
         return testing.combinations(
             2147483649,  # 32 bits
             2147483648,  # 32 bits
@@ -1280,7 +1321,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
     )
     @testing.combinations(100, 1999, 3000, 4000, 5000, 9000, argnames="length")
     def test_round_trip_pretty_large_data(self, connection, unicode_, length):
-
         if unicode_:
             data = "réve🐍illé" * ((length // 9) + 1)
             data = data[0 : (length // 2)]
@@ -1303,7 +1343,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
         eq_(row, (data_element,))
 
     def _index_fixtures(include_comparison):
-
         if include_comparison:
             # basically SQL Server and MariaDB can kind of do json
             # comparison, MySQL, PG and SQLite can't.  not worth it.
@@ -1366,7 +1405,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
     def _json_value_insert(self, connection, datatype, value, data_element):
         data_table = self.tables.data_table
         if datatype == "_decimal":
-
             # Python's builtin json serializer basically doesn't support
             # Decimal objects without implicit float conversion period.
             # users can otherwise use simplejson which supports
@@ -1444,7 +1482,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
         data_element = {"key1": value}
 
         with config.db.begin() as conn:
-
             datatype, compare_value, p_s = self._json_value_insert(
                 conn, datatype, value, data_element
             )
@@ -1489,7 +1526,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
         data_table = self.tables.data_table
         data_element = {"key1": {"subkey1": value}}
         with config.db.begin() as conn:
-
             datatype, compare_value, p_s = self._json_value_insert(
                 conn, datatype, value, data_element
             )
@@ -1703,7 +1739,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
             )
 
     def test_eval_none_flag_orm(self, connection):
-
         Base = declarative_base()
 
         class Data(Base):
@@ -2011,6 +2046,8 @@ __all__ = (
     "TextTest",
     "NumericTest",
     "IntegerTest",
+    "IntervalTest",
+    "PrecisionIntervalTest",
     "CastTypeDecoratorTest",
     "DateTimeHistoricTest",
     "DateTimeCoercedToDateTimeTest",

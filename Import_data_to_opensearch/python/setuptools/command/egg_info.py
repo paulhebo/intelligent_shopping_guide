@@ -12,12 +12,12 @@ import functools
 import os
 import re
 import sys
-import io
 import time
 import collections
 
 from .._importlib import metadata
 from .. import _entry_points, _normalization
+from . import _requirestxt
 
 from setuptools import Command
 from setuptools.command.sdist import sdist
@@ -28,7 +28,6 @@ import setuptools.unicode_utils as unicode_utils
 from setuptools.glob import glob
 
 from setuptools.extern import packaging
-from setuptools.extern.jaraco.text import yield_lines
 from ..warnings import SetuptoolsDeprecationWarning
 
 
@@ -93,7 +92,7 @@ def translate_pattern(glob):  # noqa: C901  # is too complex (14)  # FIXME
                     pat += re.escape(char)
                 else:
                     # Grab the insides of the [brackets]
-                    inner = chunk[i + 1:inner_i]
+                    inner = chunk[i + 1 : inner_i]
                     char_class = ''
 
                     # Class negation
@@ -136,7 +135,8 @@ class InfoCommon:
         in which case the version string already contains all tags.
         """
         return (
-            version if self.vtags and self._already_tagged(version)
+            version
+            if self.vtags and self._already_tagged(version)
             else version + self.vtags
         )
 
@@ -157,6 +157,7 @@ class InfoCommon:
         if self.tag_date:
             version += time.strftime("%Y%m%d")
         return version
+
     vtags = property(tags)
 
 
@@ -164,8 +165,12 @@ class egg_info(InfoCommon, Command):
     description = "create a distribution's .egg-info directory"
 
     user_options = [
-        ('egg-base=', 'e', "directory containing .egg-info directories"
-                           " (default: top of the source tree)"),
+        (
+            'egg-base=',
+            'e',
+            "directory containing .egg-info directories"
+            " (default: top of the source tree)",
+        ),
         ('tag-date', 'd', "Add date stamp (e.g. 20050528) to version number"),
         ('tag-build=', 'b', "Specify explicit tag to add to version number"),
         ('no-date', 'D', "Don't include date stamp [default]"),
@@ -181,7 +186,6 @@ class egg_info(InfoCommon, Command):
         self.egg_name = None
         self.egg_info = None
         self.egg_version = None
-        self.broken_egg_info = False
         self.ignore_egg_info_in_manifest = False
 
     ####################################
@@ -194,6 +198,7 @@ class egg_info(InfoCommon, Command):
     @tag_svn_revision.setter
     def tag_svn_revision(self, value):
         pass
+
     ####################################
 
     def save_version_info(self, filename):
@@ -224,8 +229,8 @@ class egg_info(InfoCommon, Command):
             packaging.requirements.Requirement(spec % (self.egg_name, self.egg_version))
         except ValueError as e:
             raise distutils.errors.DistutilsOptionError(
-                "Invalid distribution name or version syntax: %s-%s" %
-                (self.egg_name, self.egg_version)
+                "Invalid distribution name or version syntax: %s-%s"
+                % (self.egg_name, self.egg_version)
             ) from e
 
         if self.egg_base is None:
@@ -236,8 +241,6 @@ class egg_info(InfoCommon, Command):
         self.egg_info = _normalization.filename_component(self.egg_name) + '.egg-info'
         if self.egg_base != os.curdir:
             self.egg_info = os.path.join(self.egg_base, self.egg_info)
-        if '-' in self.egg_name:
-            self.check_broken_egg_info()
 
         # Set package version for the benefit of dumber commands
         # (e.g. sdist, bdist_wininst, etc.)
@@ -272,9 +275,7 @@ class egg_info(InfoCommon, Command):
             self.write_file(what, filename, data)
         elif os.path.exists(filename):
             if data is None and not force:
-                log.warn(
-                    "%s not set in setup(), but %s exists", what, filename
-                )
+                log.warn("%s not set in setup(), but %s exists", what, filename)
                 return
             else:
                 self.delete_file(filename)
@@ -325,25 +326,6 @@ class egg_info(InfoCommon, Command):
         mm.run()
         self.filelist = mm.filelist
 
-    def check_broken_egg_info(self):
-        bei = self.egg_name + '.egg-info'
-        if self.egg_base != os.curdir:
-            bei = os.path.join(self.egg_base, bei)
-        if os.path.exists(bei):
-            EggInfoDeprecationWarning.emit(
-                "Invalid egg-info directory name.",
-                f"""
-                Your current .egg-info directory has a '-' in its name;
-                this will not work correctly with setuptools commands.
-
-                Please rename {bei!r} to {self.egg_info!r} to correct this problem.
-                """,
-                due_date=(2023, 6, 1),
-                # Old warning, introduced in 2005, might be safe to remove soon
-            )
-            self.broken_egg_info = self.egg_info
-            self.egg_info = bei  # make it work for now
-
 
 class FileList(_FileList):
     # Implementations of the various MANIFEST.in commands
@@ -366,31 +348,28 @@ class FileList(_FileList):
             'global-include': self.global_include,
             'global-exclude': self.global_exclude,
             'recursive-include': functools.partial(
-                self.recursive_include, dir,
+                self.recursive_include,
+                dir,
             ),
             'recursive-exclude': functools.partial(
-                self.recursive_exclude, dir,
+                self.recursive_exclude,
+                dir,
             ),
             'graft': self.graft,
             'prune': self.prune,
         }
         log_map = {
             'include': "warning: no files found matching '%s'",
-            'exclude': (
-                "warning: no previously-included files found "
-                "matching '%s'"
-            ),
+            'exclude': ("warning: no previously-included files found " "matching '%s'"),
             'global-include': (
-                "warning: no files found matching '%s' "
-                "anywhere in distribution"
+                "warning: no files found matching '%s' " "anywhere in distribution"
             ),
             'global-exclude': (
                 "warning: no previously-included files matching "
                 "'%s' found anywhere in distribution"
             ),
             'recursive-include': (
-                "warning: no files found matching '%s' "
-                "under directory '%s'"
+                "warning: no files found matching '%s' " "under directory '%s'"
             ),
             'recursive-exclude': (
                 "warning: no previously-included files matching "
@@ -404,8 +383,7 @@ class FileList(_FileList):
             process_action = action_map[action]
         except KeyError:
             raise DistutilsInternalError(
-                "this cannot happen: invalid action '{action!s}'".
-                format(action=action),
+                "this cannot happen: invalid action '{action!s}'".format(action=action),
             )
 
         # OK, now we know that the action is valid and we have the
@@ -415,14 +393,12 @@ class FileList(_FileList):
         action_is_recursive = action.startswith('recursive-')
         if action in {'graft', 'prune'}:
             patterns = [dir_pattern]
-        extra_log_args = (dir, ) if action_is_recursive else ()
+        extra_log_args = (dir,) if action_is_recursive else ()
         log_tmpl = log_map[action]
 
         self.debug_print(
             ' '.join(
-                [action] +
-                ([dir] if action_is_recursive else []) +
-                patterns,
+                [action] + ([dir] if action_is_recursive else []) + patterns,
             )
         )
         for pattern in patterns:
@@ -458,8 +434,7 @@ class FileList(_FileList):
         Include all files anywhere in 'dir/' that match the pattern.
         """
         full_pattern = os.path.join(dir, '**', pattern)
-        found = [f for f in glob(full_pattern, recursive=True)
-                 if not os.path.isdir(f)]
+        found = [f for f in glob(full_pattern, recursive=True) if not os.path.isdir(f)]
         self.extend(found)
         return bool(found)
 
@@ -645,8 +620,9 @@ class manifest_maker(sdist):
         self.filelist.prune(build.build_base)
         self.filelist.prune(base_dir)
         sep = re.escape(os.sep)
-        self.filelist.exclude_pattern(r'(^|' + sep + r')(RCS|CVS|\.svn)' + sep,
-                                      is_regex=1)
+        self.filelist.exclude_pattern(
+            r'(^|' + sep + r')(RCS|CVS|\.svn)' + sep, is_regex=1
+        )
 
     def _safe_data_files(self, build_py):
         """
@@ -706,51 +682,23 @@ def write_pkg_info(cmd, basename, filename):
 
 
 def warn_depends_obsolete(cmd, basename, filename):
-    if os.path.exists(filename):
-        EggInfoDeprecationWarning.emit(
-            "Deprecated config.",
-            """
-            'depends.txt' is not used by setuptools >= 0.6!
-            Configure your dependencies via `setup.cfg` or `pyproject.toml` instead.
-            """,
-            see_docs="userguide/declarative_config.html",
-            due_date=(2023, 6, 1),
-            # Old warning, introduced in 2005, it might be safe to remove soon.
-        )
+    """
+    Unused: left to avoid errors when updating (from source) from <= 67.8.
+    Old installations have a .dist-info directory with the entry-point
+    ``depends.txt = setuptools.command.egg_info:warn_depends_obsolete``.
+    This may trigger errors when running the first egg_info in build_meta.
+    TODO: Remove this function in a version sufficiently > 68.
+    """
 
 
-def _write_requirements(stream, reqs):
-    lines = yield_lines(reqs or ())
-
-    def append_cr(line):
-        return line + '\n'
-    lines = map(append_cr, lines)
-    stream.writelines(lines)
-
-
-def write_requirements(cmd, basename, filename):
-    dist = cmd.distribution
-    data = io.StringIO()
-    _write_requirements(data, dist.install_requires)
-    extras_require = dist.extras_require or {}
-    for extra in sorted(extras_require):
-        data.write('\n[{extra}]\n'.format(**vars()))
-        _write_requirements(data, extras_require[extra])
-    cmd.write_or_delete_file("requirements", filename, data.getvalue())
-
-
-def write_setup_requirements(cmd, basename, filename):
-    data = io.StringIO()
-    _write_requirements(data, cmd.distribution.setup_requires)
-    cmd.write_or_delete_file("setup-requirements", filename, data.getvalue())
+# Export API used in entry_points
+write_requirements = _requirestxt.write_requirements
+write_setup_requirements = _requirestxt.write_setup_requirements
 
 
 def write_toplevel_names(cmd, basename, filename):
     pkgs = dict.fromkeys(
-        [
-            k.split('.', 1)[0]
-            for k in cmd.distribution.iter_distribution_names()
-        ]
+        [k.split('.', 1)[0] for k in cmd.distribution.iter_distribution_names()]
     )
     cmd.write_file("top-level names", filename, '\n'.join(sorted(pkgs)) + '\n')
 
@@ -771,26 +719,6 @@ def write_entries(cmd, basename, filename):
     eps = _entry_points.load(cmd.distribution.entry_points)
     defn = _entry_points.render(eps)
     cmd.write_or_delete_file('entry points', filename, defn, True)
-
-
-def get_pkg_info_revision():
-    """
-    Get a -r### off of PKG-INFO Version in case this is an sdist of
-    a subversion revision.
-    """
-    EggInfoDeprecationWarning.emit(
-        "Deprecated API call",
-        "get_pkg_info_revision is deprecated.",
-        due_date=(2023, 6, 1),
-        # Warning introduced in 11 Dec 2015, should be safe to remove
-    )
-    if os.path.exists('PKG-INFO'):
-        with io.open('PKG-INFO') as f:
-            for line in f:
-                match = re.match(r"Version:.*-r(\d+)\s*$", line)
-                if match:
-                    return int(match.group(1))
-    return 0
 
 
 def _egg_basename(egg_name, egg_version, py_version=None, platform=None):
